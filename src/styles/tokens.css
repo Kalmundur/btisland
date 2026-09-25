@@ -1,0 +1,79 @@
+/*
+ * Design tokens. Change the accent here (one place) to re-theme the whole app.
+ */
+:root {
+  /* Accent – restrained teal */
+  --accent: #0f766e;
+  --accent-strong: #0b5c55;
+  --accent-soft: #e7f3f1;
+  --on-accent: #ffffff;
+
+  /* Surfaces */
+  --bg: #ffffff;
+  --bg-subtle: #f4f5f6;
+  --bg-pressed: #eceef0;
+  --surface: #ffffff;
+
+  /* Text */
+  --text: #0f1418;
+  --text-muted: #5b646d;
+  --text-faint: #8a939b;
+
+  /* Lines */
+  --border: #e3e6e9;
+  --border-strong: #c7cdd2;
+
+  /* Semantic */
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --success: #1a7f37;
+  --success-soft: #e8f5ec;
+  --warning: #9a5b00;
+  --warning-soft: #fff4e0;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Controls */
+  --control-height: 48px;
+  --control-height-sm: 36px;
+  --touch-min: 44px;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-score: 40px;
+
+  /* Layout */
+  --content-max: 600px;
+  --header-height: 52px;
+  --nav-height: 58px;
+  --admin-sidebar: 240px;
+
+  /* Safe areas (iPhone notch / home indicator, Capacitor) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --shadow-overlay: 0 8px 24px rgb(15 20 24 / 0.16);
+}
