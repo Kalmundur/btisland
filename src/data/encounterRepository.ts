@@ -181,6 +181,32 @@ const REALTIME_TABLES = [
 let channelSeq = 0;
 
 /**
+ * Watches a set of encounters (a division, a round, a dashboard) – any change to their
+ * status, score, games, conflicts or confirmations triggers one debounced refetch.
+ */
+export function subscribeToEncounterSet(encounterIds: readonly UUID[], onChange: () => void, debounceMs = 300): () => void {
+  if (encounterIds.length === 0) return () => undefined;
+  const client = requireSupabase();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const fire = () => {
+    clearTimeout(timer);
+    timer = setTimeout(onChange, debounceMs);
+  };
+  // Realtime "in" filters accept up to 100 values; a division has far fewer encounters.
+  const ids = `(${encounterIds.slice(0, 100).join(',')})`;
+  let channel = client.channel(`encounters:${++channelSeq}`);
+  channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: 'encounters', filter: `id=in.${ids}` }, fire);
+  for (const table of ['encounter_games', 'reconciled_set_states', 'result_confirmations', 'lineups', 'doubles_selections']) {
+    channel = channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `encounter_id=in.${ids}` }, fire);
+  }
+  channel.subscribe();
+  return () => {
+    clearTimeout(timer);
+    void client.removeChannel(channel);
+  };
+}
+
+/**
  * Calls `onChange` (debounced) whenever anything about the encounter changes. Consumers
  * refetch – the database stays the single source of truth. Returns the cleanup function.
  */

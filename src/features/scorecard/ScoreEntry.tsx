@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronLeft, CloudOff, Pencil } from 'lucide-react';
@@ -9,6 +9,7 @@ import { scorerView, type OwnEntry } from '../../domain/scorer';
 import { matchParticipants, type EncounterData } from '../../hooks/useEncounterData';
 import { newClientEntryId, scoreOutbox, useOutbox } from '../../offline/scoreSync';
 import { ScoreStepper } from './ScoreStepper';
+import { scoreDrafts } from './scorecardMemory';
 
 /**
  * Focused scoring for one individual match. Each scorer submits their own entry per game
@@ -42,15 +43,28 @@ export function ScoreEntry({
   }, [data.entries, outbox.pending, encounter.id, matchNumber, myPlayerId]);
 
   const view = scorerView(match.games, mine);
-  const [editingGame, setEditingGame] = useState<number | null>(null);
+  // A half-entered game survives tab switches (the page unmounts); stale drafts are ignored.
+  const draftKey = scoreDrafts.key(encounter.id, matchNumber);
+  const [initialDraft] = useState(() => {
+    const d = scoreDrafts.get(draftKey);
+    return d && (d.editing || d.gameNumber === view.nextGame) ? d : undefined;
+  });
+  const [editingGame, setEditingGame] = useState<number | null>(initialDraft?.editing ? initialDraft.gameNumber : null);
   const currentGame = editingGame ?? view.nextGame;
-  const [score, setScore] = useState({ home: 0, away: 0 });
+  const [score, setScore] = useState(initialDraft ? { home: initialDraft.home, away: initialDraft.away } : { home: 0, away: 0 });
   const [openConflict, setOpenConflict] = useState<number | null>(null);
+  const lastGame = useRef(currentGame);
 
   // Fresh 0–0 whenever the game being entered changes.
   useEffect(() => {
+    if (lastGame.current === currentGame) return;
+    lastGame.current = currentGame;
     if (editingGame === null) setScore({ home: 0, away: 0 });
   }, [currentGame, editingGame]);
+
+  useEffect(() => {
+    if (currentGame) scoreDrafts.set(draftKey, { gameNumber: currentGame, editing: editingGame !== null, ...score });
+  }, [draftKey, currentGame, editingGame, score]);
 
   const players = matchParticipants(data, matchNumber, match.homeSlot, match.awaySlot);
   const label = (ids: string[], fallback: string) => ids.map((id) => data.names[id] ?? '…').join(' / ') || fallback;
@@ -78,6 +92,7 @@ export function ScoreEntry({
     });
     setEditingGame(null);
     setScore({ home: 0, away: 0 });
+    scoreDrafts.clear(draftKey);
     if (decidesMatch) navigate('/scorecard');
   };
 

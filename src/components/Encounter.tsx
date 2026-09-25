@@ -14,22 +14,61 @@ function hasScore(e: EncounterDetail) {
   return e.homeScore != null && e.awayScore != null;
 }
 
-/** Compact schedule/result row: home – score – away. */
-export function EncounterRow({ encounter, showDate }: { encounter: EncounterDetail; showDate?: boolean }) {
+/**
+ * Compact schedule/result row: home – score – away.
+ * `showStatus` adds a status line (with an optional conflict count, e.g. for organizers).
+ */
+export function EncounterRow({
+  encounter,
+  showDate,
+  showStatus,
+  conflicts = 0,
+  to,
+}: {
+  encounter: EncounterDetail;
+  showDate?: boolean;
+  showStatus?: boolean;
+  conflicts?: number;
+  to?: string;
+}) {
   const { t } = useTranslation();
   const e = encounter;
   const live = e.status === 'in_progress' || e.status === 'lineups' || e.status === 'awaiting_confirmation';
+  const scored = hasScore(e) && e.status !== 'scheduled';
   return (
     <li>
-      <Link to={`/live/match/${e.id}`} className="enc-row">
+      <Link to={to ?? `/live/match/${e.id}`} className="enc-row">
         <span className="enc-row__team enc-row__team--home">{e.homeTeamName}</span>
         <span className={`enc-row__score num${live ? ' enc-row__score--live' : ''}`}>
-          {hasScore(e) ? `${e.homeScore}–${e.awayScore}` : showDate ? formatShortDate(e.round.date) : t('common.vs')}
+          {scored ? `${e.homeScore}–${e.awayScore}` : showDate ? formatShortDate(e.round.date) : t('common.vs')}
         </span>
         <span className="enc-row__team enc-row__team--away">{e.awayTeamName}</span>
+        {showStatus && (
+          <span className="enc-row__meta">
+            <StatusBadge status={e.status} />
+            {conflicts > 0 && <span className="enc-row__conflicts">{t('live.conflicts', { count: conflicts })}</span>}
+          </span>
+        )}
       </Link>
     </li>
   );
+}
+
+/** Long public status line for finished/closed encounters. */
+export function useStatusLine(status: EncounterStatus): string | null {
+  const { t } = useTranslation();
+  switch (status) {
+    case 'awaiting_confirmation':
+      return t('live.awaitingConfirmation');
+    case 'completed':
+      return t('live.resultConfirmed');
+    case 'postponed':
+      return t('status.postponed');
+    case 'cancelled':
+      return t('status.cancelled');
+    default:
+      return null;
+  }
 }
 
 /** Large match header used on the scorecard and match pages. `score` overrides the stored score (live screens pass the derived score). */

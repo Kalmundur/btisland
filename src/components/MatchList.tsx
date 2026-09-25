@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronRight, Lock } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import type { EncounterState, MatchState } from '../domain/encounterState';
 import { matchParticipants, type EncounterData } from '../hooks/useEncounterData';
 
@@ -53,6 +54,10 @@ function MatchRow({
   const homeLabel = m.kind === 'doubles' ? 'D' : m.homeSlot;
   const awayLabel = m.kind === 'doubles' ? 'D' : m.awaySlot;
   const started = m.status === 'completed' || m.homeGames + m.awayGames > 0;
+  // Public view: game scores on expand. Scorecard/admin: always visible when requested.
+  const expandable = publicView && m.games.length > 0 && m.status !== 'not_played';
+  const [open, setOpen] = useState(false);
+  const gamesVisible = expandable ? open : showGames;
 
   const side = (label: string | null, ids: string[], won: boolean) => (
     <span className={`match-row__player${won ? ' match-row__player--won' : ''}`}>
@@ -67,7 +72,7 @@ function MatchRow({
       <span className="match-row__players">
         {side(homeLabel, players.home, m.winner === 'home')}
         {side(awayLabel, players.away, m.winner === 'away')}
-        {showGames && m.games.length > 0 && m.status !== 'not_played' && (
+        {gamesVisible && m.games.length > 0 && m.status !== 'not_played' && (
           <span className="match-row__games num">
             {(m.status === 'completed' ? m.games.slice(0, m.homeGames + m.awayGames) : m.games).map((g) =>
               g.status === 'conflict' ? (
@@ -82,7 +87,7 @@ function MatchRow({
             )}
           </span>
         )}
-        {showGames && m.conflictGames.length > 0 && m.status !== 'not_played' && (
+        {(gamesVisible || publicView) && m.conflictGames.length > 0 && m.status !== 'not_played' && (
           <span className="match-row__note">{t('match.inConfirmation')}</span>
         )}
       </span>
@@ -97,6 +102,7 @@ function MatchRow({
         <StatusMark status={m.status} publicView={publicView} />
       </span>
       {to && <ChevronRight size={16} className="match-row__chevron" aria-hidden />}
+      {expandable && <ChevronDown size={16} className={`match-row__chevron${open ? ' match-row__chevron--open' : ''}`} aria-hidden />}
     </>
   );
 
@@ -106,6 +112,10 @@ function MatchRow({
         <Link to={to} className="match-row__inner match-row__inner--link">
           {body}
         </Link>
+      ) : expandable ? (
+        <button type="button" className="match-row__inner match-row__inner--link match-row__inner--button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          {body}
+        </button>
       ) : (
         <div className="match-row__inner">{body}</div>
       )}

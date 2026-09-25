@@ -14,7 +14,7 @@ const SUPABASE_STUBS = `
 create role anon nologin;
 create role authenticated nologin;
 create schema auth;
-create table auth.users (id uuid primary key);
+create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create publication supabase_realtime;
@@ -32,7 +32,7 @@ export interface TestDb {
   /** Run as the given auth user (null = anon), like a PostgREST request. */
   as<T>(userId: string | null, fn: () => Promise<T>): Promise<T>;
   query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
-  createUser(): Promise<string>;
+  createUser(email?: string): Promise<string>;
   playerId(fullName: string): Promise<string>;
 }
 
@@ -68,9 +68,9 @@ export async function createTestDb(): Promise<TestDb> {
     db,
     as,
     query,
-    async createUser() {
+    async createUser(email?: string) {
       const id = randomUUID();
-      await query('insert into auth.users (id) values ($1)', [id]);
+      await query('insert into auth.users (id, email) values ($1, $2)', [id, email ?? null]);
       return id;
     },
     async playerId(fullName) {

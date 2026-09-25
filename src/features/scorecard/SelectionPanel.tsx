@@ -204,7 +204,7 @@ export function OpponentSelectionStatus({
         <span className="opponent-status__label">{label}</span>
         <span className={`opponent-status__value${progress.stage === 'locked' ? ' opponent-status__value--locked' : ''}`}>{text}</span>
       </div>
-      <p className="note">{hiddenNote}</p>
+      {hiddenNote && <p className="note">{hiddenNote}</p>}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { AdminDashboard } from './AdminDashboard';
 import { CrudPage } from './CrudPage';
 import { RoundDetailPage } from './RoundDetailPage';
 import { EncounterDetailPage } from './EncounterDetailPage';
+import { ClubDetailPage, DivisionDetailPage, PlayerDetailPage, TeamDetailPage } from './EntityDetailPages';
 import { RESOURCES } from './resources';
 import { NotFoundPage } from '../NotFoundPage';
 import '../../styles/admin.css';
@@ -24,6 +25,10 @@ export default function AdminApp() {
         ))}
         <Route path="rounds/:roundId" element={<RoundDetailPage />} />
         <Route path="encounters/:encounterId" element={<EncounterDetailPage />} />
+        <Route path="clubs/:clubId" element={<ClubDetailPage />} />
+        <Route path="teams/:teamId" element={<TeamDetailPage />} />
+        <Route path="players/:playerId" element={<PlayerDetailPage />} />
+        <Route path="divisions/:divisionId" element={<DivisionDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

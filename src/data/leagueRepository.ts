@@ -30,6 +30,8 @@ import {
   type TeamRow,
 } from './mappers';
 import { unwrap } from './result';
+import { isUuid } from '../lib/ids';
+import type { GameWithContext } from '../domain/playerStats';
 
 const db = () => requireSupabase();
 
@@ -52,7 +54,7 @@ export async function getCurrentLeague(): Promise<LeagueContext | null> {
   const divisions = unwrap(
     await db()
       .from('divisions')
-      .select('id, season_id, name, sort_order')
+      .select('id, season_id, name, sort_order, format_key')
       .eq('season_id', season.id)
       .order('sort_order')
       .limit(1),
@@ -76,6 +78,7 @@ export async function listRounds(divisionId: UUID): Promise<Round[]> {
 }
 
 export async function getRound(roundId: UUID): Promise<Round | null> {
+  if (!isUuid(roundId)) return null;
   const row = unwrap(
     await db().from('rounds').select(ROUND_COLUMNS).eq('id', roundId).maybeSingle(),
   ) as RoundRow | null;
@@ -105,6 +108,7 @@ export async function listDivisionEncounters(divisionId: UUID): Promise<Encounte
 }
 
 export async function getEncounter(encounterId: UUID): Promise<EncounterDetail | null> {
+  if (!isUuid(encounterId)) return null;
   const row = unwrap(
     await db().from('encounters').select(ENCOUNTER_DETAIL_SELECT).eq('id', encounterId).maybeSingle(),
   ) as unknown as EncounterDetailRow | null;
@@ -112,6 +116,7 @@ export async function getEncounter(encounterId: UUID): Promise<EncounterDetail |
 }
 
 export async function listTeamEncounters(teamId: UUID): Promise<EncounterDetail[]> {
+  if (!isUuid(teamId)) return [];
   const rows = unwrap(
     await db()
       .from('encounters')
@@ -122,10 +127,11 @@ export async function listTeamEncounters(teamId: UUID): Promise<EncounterDetail[
 }
 
 export async function getTeam(teamId: UUID): Promise<(Team & { club: Club | null }) | null> {
+  if (!isUuid(teamId)) return null;
   const row = unwrap(
     await db()
       .from('teams')
-      .select('id, club_id, name, is_public, club:clubs(id, name, short_name, is_public)')
+      .select('id, club_id, name, is_public, is_active, club:clubs(id, name, short_name, is_public, is_active, logo_url)')
       .eq('id', teamId)
       .maybeSingle(),
   ) as unknown as (TeamRow & { club: ClubRow | null }) | null;
@@ -171,6 +177,7 @@ export async function listPlayers(seasonId: UUID | null): Promise<PlayerListItem
 }
 
 export async function getPlayer(playerId: UUID, seasonId: UUID | null): Promise<PlayerListItem | null> {
+  if (!isUuid(playerId)) return null;
   const row = unwrap(
     await db().from('players').select(PLAYER_LIST_SELECT).eq('id', playerId).maybeSingle(),
   ) as unknown as PlayerWithRegistrationsRow | null;
@@ -178,6 +185,7 @@ export async function getPlayer(playerId: UUID, seasonId: UUID | null): Promise<
 }
 
 export async function listTeamPlayers(teamId: UUID, seasonId: UUID): Promise<PlayerListItem[]> {
+  if (!isUuid(teamId)) return [];
   const rows = unwrap(
     await db()
       .from('team_registrations')
@@ -202,15 +210,70 @@ export async function getPlayerNames(ids: readonly UUID[]): Promise<Record<UUID,
   return Object.fromEntries(rows.map((r) => [r.id, r.full_name]));
 }
 
-/** Decided games of the given encounters (input for player rankings). */
-export async function listDecidedGames(encounterIds: UUID[]): Promise<EncounterGame[]> {
+/** All derived match rows (encounter_games) of the given encounters. */
+export async function listEncounterGames(encounterIds: readonly UUID[]): Promise<EncounterGame[]> {
   if (encounterIds.length === 0) return [];
+  const rows = unwrap(
+    await db().from('encounter_games').select('*').in('encounter_id', [...encounterIds]),
+  ) as EncounterGameRow[];
+  return rows.map(toEncounterGame);
+}
+
+/** Every match a player took part in, with encounter/round context (for the player page). */
+export async function listPlayerGames(playerId: UUID): Promise<GameWithContext[]> {
+  if (!isUuid(playerId)) return [];
   const rows = unwrap(
     await db()
       .from('encounter_games')
-      .select('*')
-      .in('encounter_id', encounterIds)
-      .not('winner', 'is', null),
-  ) as EncounterGameRow[];
-  return rows.map(toEncounterGame);
+      .select(
+        '*, encounter:encounters!inner(status, home_team:teams!encounters_home_team_id_fkey(name), away_team:teams!encounters_away_team_id_fkey(name), round:rounds(round_date, number))',
+      )
+      .or(
+        ['home_player1_id', 'home_player2_id', 'away_player1_id', 'away_player2_id'].map((c) => `${c}.eq.${playerId}`).join(','),
+      ),
+  ) as unknown as Array<
+    EncounterGameRow & {
+      encounter: {
+        status: string;
+        home_team: { name: string } | null;
+        away_team: { name: string } | null;
+        round: { round_date: string; number: number } | null;
+      };
+    }
+  >;
+  return rows.map((r) => ({
+    ...toEncounterGame(r),
+    encounterStatus: r.encounter.status,
+    roundDate: r.encounter.round?.round_date ?? '',
+    roundNumber: r.encounter.round?.number ?? 0,
+    homeTeamName: r.encounter.home_team?.name ?? '',
+    awayTeamName: r.encounter.away_team?.name ?? '',
+  }));
+}
+
+/** Number of conflicted games per encounter (public: no scorer details). */
+export async function listConflictCounts(encounterIds: readonly UUID[]): Promise<Record<UUID, number>> {
+  if (encounterIds.length === 0) return {};
+  const rows = unwrap(
+    await db()
+      .from('reconciled_set_states')
+      .select('encounter_id')
+      .eq('status', 'conflict')
+      .in('encounter_id', [...encounterIds]),
+  ) as Array<{ encounter_id: string }>;
+  const counts: Record<UUID, number> = {};
+  for (const r of rows) counts[r.encounter_id] = (counts[r.encounter_id] ?? 0) + 1;
+  return counts;
+}
+
+export async function getDivision(divisionId: UUID) {
+  if (!isUuid(divisionId)) return null;
+  const row = unwrap(
+    await db()
+      .from('divisions')
+      .select('id, season_id, name, sort_order, format_key, season:seasons(id, name, starts_on, ends_on, is_current)')
+      .eq('id', divisionId)
+      .maybeSingle(),
+  ) as unknown as (DivisionRow & { season: SeasonRow | null }) | null;
+  return row ? { ...toDivision(row), season: row.season ? toSeason(row.season) : null } : null;
 }

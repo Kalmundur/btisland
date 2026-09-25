@@ -27,8 +27,10 @@ import type {
 export interface ClubRow {
   id: string;
   name: string;
-  short_name: string;
+  short_name: string | null;
   is_public: boolean;
+  is_active: boolean;
+  logo_url: string | null;
 }
 export interface SeasonRow {
   id: string;
@@ -42,12 +44,14 @@ export interface DivisionRow {
   season_id: string;
   name: string;
   sort_order: number;
+  format_key: string;
 }
 export interface TeamRow {
   id: string;
   club_id: string;
   name: string;
   is_public: boolean;
+  is_active: boolean;
 }
 export interface RoundRow {
   id: string;
@@ -161,6 +165,8 @@ export const toClub = (r: ClubRow): Club => ({
   name: r.name,
   shortName: r.short_name,
   isPublic: r.is_public,
+  isActive: r.is_active ?? true,
+  logoUrl: r.logo_url ?? null,
 });
 
 export const toSeason = (r: SeasonRow): Season => ({
@@ -176,6 +182,7 @@ export const toDivision = (r: DivisionRow): Division => ({
   seasonId: r.season_id,
   name: r.name,
   sortOrder: r.sort_order,
+  formatKey: r.format_key ?? 'REGULAR_TEN_MATCH',
 });
 
 export const toTeam = (r: TeamRow): Team => ({
@@ -183,6 +190,7 @@ export const toTeam = (r: TeamRow): Team => ({
   clubId: r.club_id,
   name: r.name,
   isPublic: r.is_public,
+  isActive: r.is_active ?? true,
 });
 
 export const toRound = (r: RoundRow): Round => ({

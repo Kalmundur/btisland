@@ -8,6 +8,7 @@ export type TeamSide = 'home' | 'away';
 
 export type EncounterStatus =
   | 'scheduled'
+  | 'postponed'
   | 'lineups'
   | 'in_progress'
   | 'awaiting_confirmation'
@@ -19,8 +20,10 @@ export type SetStateStatus = 'pending' | 'agreed' | 'conflict';
 export interface Club {
   id: UUID;
   name: string;
-  shortName: string;
+  shortName: string | null;
   isPublic: boolean;
+  isActive: boolean;
+  logoUrl: string | null;
 }
 
 export interface Season {
@@ -36,6 +39,7 @@ export interface Division {
   seasonId: UUID;
   name: string;
   sortOrder: number;
+  formatKey: string;
 }
 
 export interface Team {
@@ -43,6 +47,7 @@ export interface Team {
   clubId: UUID;
   name: string;
   isPublic: boolean;
+  isActive: boolean;
 }
 
 export interface Player {
@@ -239,21 +244,29 @@ export interface ResultConfirmation {
 }
 
 export interface StandingRow {
+  /** Shared by officially tied teams. */
   position: number;
+  tied: boolean;
   teamId: UUID;
   teamName: string;
   played: number;
   won: number;
   drawn: number;
   lost: number;
-  gamesFor: number;
-  gamesAgainst: number;
+  /** Individual matches won/lost (tiebreaker 1). */
+  matchesWon: number;
+  matchesLost: number;
+  /** Games (lotur) won/lost (tiebreaker 2). */
+  gamesWon: number;
+  gamesLost: number;
   points: number;
 }
 
 export interface PlayerRankingRow {
   position: number;
+  tied: boolean;
   playerId: UUID;
+  /** Singles only. */
   won: number;
   lost: number;
 }

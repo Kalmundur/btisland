@@ -99,7 +99,7 @@ src/
   i18n/          is (default) + en; en is type-checked against is, and a test checks key parity
   styles/        tokens.css (all colours/spacing/radius/control sizes), base, components, admin
 supabase/
-  migrations/    schema → security (RLS) → RPCs → match workflow
+  migrations/    schema → security (RLS) → RPCs → match workflow → postponed status → league admin
   seed.sql       generated
   tests/         database tests: real migrations + seed in PGlite (in-memory Postgres)
 ```
@@ -154,7 +154,17 @@ If more than one encounter matches, it returns the choices instead of guessing. 
 
 ### Decisions worth knowing
 
-- Standings: win 2, draw 1, loss 0 (`STANDINGS_POINTS` in `src/config/app.ts`). Order is points, then game difference, then games won. Only `completed` encounters count.
+- **Standings** (`src/domain/standings.ts`) are derived and never stored.
+  - Only officially confirmed encounters (`completed`) count. Points are win 2, draw 1 each, loss 0.
+  - Order: points, then the ratio of individual matches won/lost, then the ratio of games won/lost. Ratios are compared exactly by cross-multiplication, and a zero-loss record is an infinite ratio.
+  - Teams still equal after that share a rank. There is no head-to-head, no point difference, and alphabetical order is used for display only.
+- **Top 10 and player stats** (`src/domain/playerStats.ts`) count singles from confirmed encounters only. Doubles have no effect.
+  - Order: most wins, then fewest losses. Equal records share a rank, and a tie on 10th place is shown in full.
+- **Round status** ("Ekki hafin" / "Í gangi" / "Lokið") is derived from its encounters.
+- **Organizer corrections** (`admin_correct_game`) override a game's score without deleting any player entry.
+  - The encounter re-derives, and its result version goes up when the result changes. Earlier final confirmations then stop counting, and standings update automatically.
+  - Every organizer action is written to `audit_log` with who, what, before/after, reason and time.
+- **Competition formats:** divisions reference a format key (`competition_formats`). Only `REGULAR_TEN_MATCH` is implemented; the registry in `src/domain/matchFormat.ts` is where a seven-match playoff format would go.
 - A joined round stays active on the Scorecard until the day after the round date.
 - Dates are formatted from built-in Icelandic/English month and weekday names, not `Intl`. Some Chromium builds and Android WebViews lack Icelandic locale data and silently fall back to English.
 - Correcting an earlier game can move an encounter back from "awaiting confirmation" to "in progress" (e.g. a conflict appears); raw entries are never deleted and every change is also in `audit_log`.

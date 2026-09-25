@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { formatRoundCode, isCompleteRoundCode, normalizeRoundCode } from './roundCode';
 import { sideForSlot, slotsForSide, validateLineup } from './lineup';
-import { computeStandings } from './standings';
-import { rankPlayers } from './playerRanking';
 import { addDays, pickActiveSession, todayInIceland } from './activeSession';
-import type { Encounter, EncounterGame, RoundSession } from './types';
+import type { RoundSession } from './types';
 
 describe('round code', () => {
   it('normalizes pasted input to six digits', () => {
@@ -34,77 +32,6 @@ describe('lineup', () => {
     expect(validateLineup('home', { A: 'p1', B: 'p2' })).toBe('incomplete');
     expect(validateLineup('home', { A: 'p1', B: 'p1', C: 'p3' })).toBe('duplicate_player');
     expect(validateLineup('away', { A: 'p1', Y: 'p2', Z: 'p3' })).toBe('wrong_side');
-  });
-});
-
-const enc = (id: string, home: string, away: string, hs: number | null, as: number | null, status: Encounter['status'] = 'completed'): Encounter => ({
-  id,
-  roundId: 'r',
-  homeTeamId: home,
-  awayTeamId: away,
-  status,
-  homeScore: hs,
-  awayScore: as,
-  lineupsRevealedAt: null,
-  doublesRevealedAt: null,
-  resultHash: null,
-  resultVersion: 0,
-});
-
-describe('standings', () => {
-  const teams = [
-    { id: 'a', name: 'KR-A' },
-    { id: 'b', name: 'BH-A' },
-    { id: 'c', name: 'Víkingur-A' },
-  ];
-
-  it('lists every team with zeros before any results', () => {
-    const rows = computeStandings(teams, []);
-    expect(rows.map((r) => r.teamName)).toEqual(['BH-A', 'KR-A', 'Víkingur-A']);
-    expect(rows.every((r) => r.played === 0 && r.points === 0 && r.position === 1)).toBe(true);
-  });
-
-  it('awards points and sorts by points then game difference', () => {
-    const rows = computeStandings(teams, [
-      enc('1', 'a', 'b', 6, 4),
-      enc('2', 'c', 'a', 5, 5),
-      enc('3', 'b', 'c', 7, 3),
-      enc('4', 'a', 'c', null, null, 'in_progress'), // ignored
-    ]);
-    expect(rows.map((r) => [r.teamName, r.played, r.points, r.position])).toEqual([
-      ['KR-A', 2, 3, 1],
-      ['BH-A', 2, 2, 2],
-      ['Víkingur-A', 2, 1, 3],
-    ]);
-    expect(rows[0]).toMatchObject({ won: 1, drawn: 1, lost: 0, gamesFor: 11, gamesAgainst: 9 });
-  });
-});
-
-describe('player ranking', () => {
-  const game = (n: number, home: string, away: string, winner: 'home' | 'away' | null, kind: 'singles' | 'doubles' = 'singles'): EncounterGame => ({
-    id: String(n),
-    encounterId: 'e',
-    matchNumber: n,
-    kind,
-    status: winner ? 'completed' : 'in_progress',
-    homePlayerIds: [home],
-    awayPlayerIds: [away],
-    homeGames: 0,
-    awayGames: 0,
-    winner,
-  });
-
-  it('ranks by singles wins and ignores doubles/undecided games', () => {
-    const rows = rankPlayers(
-      [game(1, 'p1', 'p2', 'home'), game(2, 'p1', 'p3', 'home'), game(3, 'p2', 'p3', 'home'), game(4, 'p3', 'p1', null), game(5, 'p3', 'p2', 'home', 'doubles')],
-      10,
-    );
-    expect(rows).toEqual([
-      { position: 1, playerId: 'p1', won: 2, lost: 0 },
-      { position: 2, playerId: 'p2', won: 1, lost: 1 },
-      { position: 3, playerId: 'p3', won: 0, lost: 2 },
-    ]);
-    expect(rankPlayers([], 10)).toEqual([]);
   });
 });
 

@@ -1,0 +1,349 @@
+/* ==========================================================================
+   Public league: encounter rows, rounds, rankings, stats, sharing, nav badge
+   ========================================================================== */
+
+/* Encounter row status line */
+.enc-row__meta {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: -2px;
+}
+
+.enc-row__conflicts {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--warning);
+}
+
+.badge--postponed {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.status-line {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.status-line--completed {
+  color: var(--success);
+}
+
+.status-line--awaiting_confirmation,
+.status-line--postponed {
+  color: var(--warning);
+}
+
+.status-line--cancelled {
+  color: var(--danger);
+}
+
+/* Rounds */
+.round-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.round-block + .round-block {
+  margin-top: var(--space-3);
+}
+
+.round-block__head {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--touch-min);
+  justify-content: center;
+}
+
+.round-block__title {
+  font-weight: 800;
+}
+
+.round-block__meta {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.round-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+}
+
+.round-row:active {
+  background: var(--bg-subtle);
+}
+
+.round-row__no {
+  font-weight: 900;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.round-row__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.round-row__date {
+  font-weight: 700;
+}
+
+.round-row__venue {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.round-status {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+.round-status--in_progress {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.round-status--finished {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.round-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+/* Top 10 */
+.ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.ranking > li {
+  border-bottom: 1px solid var(--border);
+}
+
+.ranking__row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-1) 0;
+}
+
+.ranking__row:active {
+  background: var(--bg-subtle);
+}
+
+.ranking__pos {
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.ranking__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ranking__name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ranking__team {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.ranking__record {
+  font-size: var(--text-lg);
+  font-weight: 900;
+}
+
+/* Stats grid */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.stats__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.stats__item {
+  min-width: 0;
+}
+
+/* Secondary figures (e.g. win percentage) span a full, quieter row. */
+.stats__item--secondary {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  border-color: transparent;
+}
+
+.stats__label {
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats__value {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 900;
+}
+
+.stats__item--secondary .stats__value {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* Player result lines */
+.result-line {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-1) 0;
+}
+
+.result-line:active {
+  background: var(--bg-subtle);
+}
+
+.result-line__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.result-line__mark--won {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.result-line__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.result-line__who {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.result-line__meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.result-line__score {
+  font-weight: 900;
+  font-size: var(--text-lg);
+}
+
+/* Share */
+.share-btn {
+  position: relative;
+}
+
+.share-btn__toast {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--bg);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* Match list: expandable public rows */
+.match-row__inner--button {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.match-row__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* Bottom nav badge */
+.bottom-nav__icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav__badge {
+  position: absolute;
+  top: -1px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-sizing: content-box;
+}
+
+.bottom-nav__badge--active {
+  background: var(--accent);
+}
+
+.bottom-nav__badge--conflict {
+  background: var(--warning);
+}

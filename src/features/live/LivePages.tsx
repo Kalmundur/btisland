@@ -1,115 +1,164 @@
+import { useEffect } from 'react';
 import { Link, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
-import { List, ListRow, Section } from '../../components/List';
-import { EncounterHeader, EncounterRow } from '../../components/Encounter';
+import { Section } from '../../components/List';
+import { EncounterHeader, EncounterRow, useStatusLine } from '../../components/Encounter';
 import { MatchList } from '../../components/MatchList';
-import { OpponentSelectionStatus } from '../scorecard/SelectionPanel';
-import { useOutcomeText } from '../scorecard/ResultPanel';
+import { ShareButton } from '../../components/ShareButton';
 import { AsyncBoundary, EmptyState } from '../../components/StateViews';
-import { useLeague } from '../../state/LeagueContext';
 import { useAsync } from '../../hooks/useAsync';
+import { useLeagueData, type LeagueData } from '../../hooks/useLeagueData';
 import { useDerivedEncounter, useEncounterData, type EncounterData } from '../../hooks/useEncounterData';
-import {
-  getPlayer,
-  getRound,
-  getTeam,
-  listDivisionEncounters,
-  listRoundEncounters,
-  listRounds,
-  listTeamEncounters,
-  listTeamPlayers,
-} from '../../data/leagueRepository';
+import { getDivision, getRound, listRoundEncounters } from '../../data/leagueRepository';
+import { subscribeToEncounterSet } from '../../data/encounterRepository';
+import { deriveRoundStatus, liveOverview } from '../../domain/rounds';
+import { todayInIceland } from '../../domain/activeSession';
 import { formatDate, formatTime } from '../../lib/format';
 import type { EncounterDetail, Round } from '../../domain/types';
+import { OpponentSelectionStatus } from '../scorecard/SelectionPanel';
+import { useOutcomeText } from '../scorecard/ResultPanel';
 
-function roundTitle(t: (k: string, o?: Record<string, unknown>) => string, r: Round) {
-  return `${t('round.label', { number: r.number })} · ${formatDate(r.date)}`;
-}
-
-/** /live – full schedule of the current division, grouped by round. */
+/** /live – public landing: in progress now, next round, recent results, all rounds. */
 export function LivePage() {
   const { t } = useTranslation();
-  const league = useLeague();
-  const divisionId = league.data?.division.id ?? null;
-  const data = useAsync(async () => {
-    if (!divisionId) return { rounds: [] as Round[], encounters: [] as EncounterDetail[] };
-    const [rounds, encounters] = await Promise.all([listRounds(divisionId), listDivisionEncounters(divisionId)]);
-    return { rounds, encounters };
-  }, [divisionId]);
-
+  const data = useLeagueData();
   return (
     <>
       <PageHeader
         title={t('live.title')}
-        subtitle={league.data ? `${league.data.division.name} · ${league.data.season.name}` : undefined}
-        back
-        backTo="/standings"
+        subtitle={data.data ? `${data.data.league.division.name} · ${data.data.league.season.name}` : undefined}
+        actions={<ShareButton title={t('live.title')} />}
       />
       <div className="page">
-        <AsyncBoundary state={data}>
-          {({ rounds, encounters }) =>
-            rounds.length === 0 ? (
-              <EmptyState>{t('live.noRounds')}</EmptyState>
-            ) : (
-              rounds.map((r) => (
-                <Section
-                  key={r.id}
-                  title={
-                    <Link to={`/live/round/${r.id}`} className="section__link">
-                      {roundTitle(t, r)}
-                    </Link>
-                  }
-                >
-                  {r.venue && <p className="section__meta">{r.venue}</p>}
-                  <ul className="list">
-                    {encounters
-                      .filter((e) => e.roundId === r.id)
-                      .map((e) => (
-                        <EncounterRow key={e.id} encounter={e} />
-                      ))}
-                  </ul>
-                </Section>
-              ))
-            )
-          }
-        </AsyncBoundary>
+        <AsyncBoundary state={data}>{(d) => (d ? <LiveOverview data={d} /> : <EmptyState>{t('standings.noSeason')}</EmptyState>)}</AsyncBoundary>
       </div>
     </>
   );
 }
 
-/** /live/round/:roundId */
+function RoundBlock({ round, encounters }: { round: Round; encounters: EncounterDetail[] }) {
+  const { t } = useTranslation();
+  return (
+    <div className="round-block">
+      <Link to={`/live/round/${round.id}`} className="round-block__head">
+        <span className="round-block__title">{t('round.label', { number: round.number })}</span>
+        <span className="round-block__meta">
+          {formatDate(round.date)}
+          {round.venue ? ` · ${round.venue}` : ''}
+        </span>
+      </Link>
+      <ul className="list">
+        {encounters.map((e) => (
+          <EncounterRow key={e.id} encounter={e} showStatus={e.status !== 'scheduled' && e.status !== 'completed'} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LiveOverview({ data }: { data: LeagueData }) {
+  const { t } = useTranslation();
+  const overview = liveOverview(data.rounds, data.encounters, todayInIceland());
+  const inRound = (r: Round) => data.encounters.filter((e) => e.roundId === r.id);
+  const statusOf = (r: Round) => deriveRoundStatus(inRound(r));
+
+  return (
+    <>
+      <Section title={t('live.active')}>
+        {overview.active.length === 0 ? (
+          <p className="note">{t('live.noActive')}</p>
+        ) : (
+          <ul className="list">
+            {overview.active.map((e) => (
+              <EncounterRow key={e.id} encounter={e} showStatus />
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      {overview.upcoming && (
+        <Section title={t('live.upcoming')}>
+          <RoundBlock round={overview.upcoming} encounters={inRound(overview.upcoming)} />
+        </Section>
+      )}
+
+      {overview.recent.length > 0 && (
+        <Section title={t('live.recent')}>
+          {overview.recent.map((r) => (
+            <RoundBlock key={r.id} round={r} encounters={inRound(r)} />
+          ))}
+        </Section>
+      )}
+
+      <Section title={t('live.allRounds')}>
+        <ul className="list">
+          {data.rounds.map((r) => (
+            <li key={r.id}>
+              <Link to={`/live/round/${r.id}`} className="round-row">
+                <span className="round-row__no num">{r.number}</span>
+                <span className="round-row__main">
+                  <span className="round-row__date">{formatDate(r.date)}</span>
+                  <span className="round-row__venue">{r.venue}</span>
+                </span>
+                <span className={`round-status round-status--${statusOf(r)}`}>{t(`roundStatus.${statusOf(r)}`)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </>
+  );
+}
+
+/** /live/round/:roundId – permanent, shareable round page with live scores. */
 export function RoundPage() {
   const { t } = useTranslation();
   const { roundId = '' } = useParams();
   const data = useAsync(async () => {
-    const [round, encounters] = await Promise.all([getRound(roundId), listRoundEncounters(roundId)]);
-    return { round, encounters };
+    const round = await getRound(roundId);
+    if (!round) return null;
+    const [encounters, division] = await Promise.all([listRoundEncounters(roundId), getDivision(round.divisionId)]);
+    return { round, encounters, division };
   }, [roundId]);
+
+  const ids = data.data?.encounters.map((e) => e.id).join(',') ?? '';
+  const { reload } = data;
+  useEffect(() => (ids ? subscribeToEncounterSet(ids.split(','), reload) : undefined), [ids, reload]);
 
   return (
     <AsyncBoundary state={data}>
-      {({ round, encounters }) =>
-        !round ? (
+      {(d) =>
+        !d ? (
           <>
-            <PageHeader title={t('live.title')} back backTo="/live" />
+            <PageHeader title={t('live.notFound')} back backTo="/live" />
             <EmptyState>{t('live.notFound')}</EmptyState>
           </>
         ) : (
           <>
-            <PageHeader title={t('round.label', { number: round.number })} subtitle={formatDate(round.date)} back backTo="/live" />
+            <PageHeader
+              title={t('round.label', { number: d.round.number })}
+              subtitle={d.division ? `${d.division.name} · ${d.division.season?.name ?? ''}` : undefined}
+              back
+              backTo="/live"
+              actions={<ShareButton title={`${t('round.label', { number: d.round.number })} · ${d.division?.name ?? ''}`} />}
+            />
             <div className="page">
-              <p className="section__meta">
-                {formatTime(round.startTime) ?? t('common.tba')}
-                {round.venue ? ` · ${round.venue}` : ''}
-              </p>
-              {encounters.length === 0 ? (
+              <div className="round-info">
+                <span className={`round-status round-status--${deriveRoundStatus(d.encounters)}`}>
+                  {t(`roundStatus.${deriveRoundStatus(d.encounters)}`)}
+                </span>
+                <p>
+                  {formatDate(d.round.date)} · {formatTime(d.round.startTime) ?? t('common.tba')}
+                </p>
+                {d.round.venue && <p className="muted">{d.round.venue}</p>}
+              </div>
+              {d.encounters.length === 0 ? (
                 <EmptyState>{t('live.noEncounters')}</EmptyState>
               ) : (
                 <ul className="list">
-                  {encounters.map((e) => (
-                    <EncounterRow key={e.id} encounter={e} />
+                  {d.encounters.map((e) => (
+                    <EncounterRow key={e.id} encounter={e} showStatus />
                   ))}
                 </ul>
               )}
@@ -126,10 +175,11 @@ export function MatchPage() {
   const { t } = useTranslation();
   const { encounterId = '' } = useParams();
   const data = useEncounterData(encounterId);
+  const title = data.data?.encounter ? `${data.data.encounter.homeTeamName} – ${data.data.encounter.awayTeamName}` : t('live.matchTitle');
 
   return (
     <>
-      <PageHeader title={t('live.matchTitle')} back backTo="/live" />
+      <PageHeader title={t('live.matchTitle')} back backTo="/live" actions={<ShareButton title={title} />} />
       <div className="page">
         <AsyncBoundary state={data}>{(d) => <PublicMatch data={d} />}</AsyncBoundary>
       </div>
@@ -141,16 +191,29 @@ function PublicMatch({ data }: { data: EncounterData }) {
   const { t } = useTranslation();
   const state = useDerivedEncounter(data);
   const outcome = useOutcomeText(data.encounter, state);
+  const statusLine = useStatusLine(data.encounter?.status ?? 'scheduled');
   const encounter = data.encounter;
   if (!encounter || !state) return <EmptyState>{t('live.notFound')}</EmptyState>;
   const revealed = !!encounter.lineupsRevealedAt;
+
   return (
     <>
       <EncounterHeader
         encounter={encounter}
         score={revealed ? { home: state.homeScore, away: state.awayScore } : null}
-        note={outcome}
+        note={
+          outcome || statusLine ? (
+            <>
+              {outcome}
+              {outcome && statusLine && <br />}
+              {statusLine && <span className={`status-line status-line--${encounter.status}`}>{statusLine}</span>}
+            </>
+          ) : undefined
+        }
       />
+      <Link to={`/live/round/${encounter.roundId}`} className="back-link">
+        {t('round.label', { number: encounter.round.number })} · {formatDate(encounter.round.date)}
+      </Link>
       {!revealed ? (
         <Section title={t('scorecard.lineupTitle')}>
           {(['home', 'away'] as const).map((side) => (
@@ -170,92 +233,10 @@ function PublicMatch({ data }: { data: EncounterData }) {
           {state.phase1Complete && !encounter.doublesRevealedAt && !state.decided && (
             <p className="note">{t('match.doublesPending')}</p>
           )}
-          <MatchList state={state} data={data} showGames publicView />
+          <MatchList state={state} data={data} publicView />
+          <p className="note">{t('live.expandHint')}</p>
         </Section>
       )}
     </>
-  );
-}
-
-/** /team/:teamId */
-export function TeamPage() {
-  const { t } = useTranslation();
-  const { teamId = '' } = useParams();
-  const league = useLeague();
-  const seasonId = league.data?.season.id ?? null;
-  const data = useAsync(async () => {
-    const [team, encounters, players] = await Promise.all([
-      getTeam(teamId),
-      listTeamEncounters(teamId),
-      seasonId ? listTeamPlayers(teamId, seasonId) : Promise.resolve([]),
-    ]);
-    return { team, encounters, players };
-  }, [teamId, seasonId]);
-
-  return (
-    <AsyncBoundary state={data}>
-      {({ team, encounters, players }) =>
-        !team ? (
-          <>
-            <PageHeader title={t('live.notFound')} back backTo="/standings" />
-            <EmptyState>{t('live.notFound')}</EmptyState>
-          </>
-        ) : (
-          <>
-            <PageHeader title={team.name} subtitle={team.club?.name} back backTo="/standings" />
-            <div className="page">
-              <Section title={t('team.squad')}>
-                <List>
-                  {players.map((p) => (
-                    <ListRow key={p.id} to={`/player/${p.id}`} title={p.fullName} chevron />
-                  ))}
-                </List>
-              </Section>
-              <Section title={t('team.fixtures')}>
-                <ul className="list">
-                  {encounters.map((e) => (
-                    <EncounterRow key={e.id} encounter={e} showDate />
-                  ))}
-                </ul>
-              </Section>
-            </div>
-          </>
-        )
-      }
-    </AsyncBoundary>
-  );
-}
-
-/** /player/:playerId */
-export function PlayerPage() {
-  const { t } = useTranslation();
-  const { playerId = '' } = useParams();
-  const league = useLeague();
-  const seasonId = league.data?.season.id ?? null;
-  const data = useAsync(() => getPlayer(playerId, seasonId), [playerId, seasonId]);
-
-  return (
-    <AsyncBoundary state={data}>
-      {(player) =>
-        !player ? (
-          <>
-            <PageHeader title={t('live.notFound')} back backTo="/players" />
-            <EmptyState>{t('live.notFound')}</EmptyState>
-          </>
-        ) : (
-          <>
-            <PageHeader title={player.fullName} back backTo="/players" />
-            <div className="page">
-              <List>
-                {player.teamId && (
-                  <ListRow to={`/team/${player.teamId}`} title={player.teamName} subtitle={t('player.team')} chevron />
-                )}
-                <ListRow title={player.clubName} subtitle={t('player.club')} />
-              </List>
-            </div>
-          </>
-        )
-      }
-    </AsyncBoundary>
   );
 }

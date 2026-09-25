@@ -3,7 +3,7 @@
  * Nothing here is stored: team score, phases, early finish and draw are recalculated
  * from scratch every time, so corrections to earlier games propagate automatically.
  */
-import { MATCH_FORMAT, WINS_TO_TAKE_ENCOUNTER, type MatchFormatEntry } from './matchFormat';
+import { DEFAULT_FORMAT, type CompetitionFormat, type MatchFormatEntry } from './matchFormat';
 import { matchProgress } from './tableTennis';
 import type { MatchStatus, ReconciledGame, TeamSide } from './types';
 
@@ -38,10 +38,12 @@ export interface EncounterInput {
   lineupsRevealed: boolean;
   doublesRevealed: boolean;
   games: readonly ReconciledGame[];
+  /** Defaults to the regular ten-match format (the only one implemented). */
+  format?: CompetitionFormat;
 }
 
-export function deriveEncounter({ lineupsRevealed, doublesRevealed, games }: EncounterInput): EncounterState {
-  const perMatch = MATCH_FORMAT.map((f) => {
+export function deriveEncounter({ lineupsRevealed, doublesRevealed, games, format = DEFAULT_FORMAT }: EncounterInput): EncounterState {
+  const perMatch = format.matches.map((f) => {
     const own = games.filter((g) => g.matchNumber === f.number).sort((a, b) => a.gameNumber - b.gameNumber);
     const progress = matchProgress(
       own.map((g) => ({ gameNumber: g.gameNumber, homePoints: g.homePoints, awayPoints: g.awayPoints, conflict: g.status === 'conflict' })),
@@ -58,7 +60,7 @@ export function deriveEncounter({ lineupsRevealed, doublesRevealed, games }: Enc
     } else if (f.phase === 2) {
       unlocked[i] = phase1Complete && doublesRevealed;
     } else {
-      unlocked[i] = counted[MATCH_FORMAT.findIndex((m) => m.phase === 2)];
+      unlocked[i] = counted[format.matches.findIndex((m) => m.phase === 2)];
     }
     counted[i] = unlocked[i] && progress.winner !== null;
     if (f.phase === 1) phase1Complete = phase1Complete && counted[i];
@@ -71,7 +73,7 @@ export function deriveEncounter({ lineupsRevealed, doublesRevealed, games }: Enc
     if (progress.winner === 'home') homeScore++;
     else awayScore++;
   });
-  const decided = homeScore >= WINS_TO_TAKE_ENCOUNTER || awayScore >= WINS_TO_TAKE_ENCOUNTER;
+  const decided = homeScore >= format.winsToTakeEncounter || awayScore >= format.winsToTakeEncounter;
   const finished = decided || counted.every(Boolean);
 
   const matches: MatchState[] = perMatch.map(({ f, own, progress }, i) => {

@@ -9,7 +9,9 @@ import { ScorecardPage } from './features/scorecard/ScorecardPage';
 import { StandingsPage } from './features/standings/StandingsPage';
 import { PlayersPage } from './features/players/PlayersPage';
 import { ChangeProfilePage, SettingsPage } from './features/settings/SettingsPage';
-import { LivePage, MatchPage, PlayerPage, RoundPage, TeamPage } from './features/live/LivePages';
+import { LivePage, MatchPage, RoundPage } from './features/live/LivePages';
+import { TeamPage } from './features/team/TeamPage';
+import { PlayerPage } from './features/players/PlayerPage';
 import { NotFoundPage } from './features/NotFoundPage';
 
 const AdminApp = lazy(() => import('./features/admin/AdminApp'));

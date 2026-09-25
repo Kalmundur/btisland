@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, UserRound } from 'lucide-react';
+import { Info, ShieldCheck, UserRound } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
 import { List, ListRow, Section } from '../../components/List';
 import { SegmentedControl } from '../../components/Inputs';
@@ -44,15 +44,12 @@ export function SettingsPage() {
           </Button>
         </Section>
 
-        <Section title={t('settings.organizer')}>
+        <Section title={t('settings.about')}>
           <List>
+            <ListRow leading={<Info size={20} aria-hidden />} title={APP_NAME} subtitle={t('settings.version', { version: APP_VERSION })} />
             <ListRow to="/admin" leading={<ShieldCheck size={20} aria-hidden />} title={t('settings.adminPortal')} chevron />
           </List>
         </Section>
-
-        <p className="app-footer">
-          {APP_NAME} · {t('settings.version', { version: APP_VERSION })}
-        </p>
       </div>
     </>
   );

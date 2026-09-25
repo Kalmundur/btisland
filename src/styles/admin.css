@@ -506,3 +506,124 @@
 .admin-audit > :last-child {
   grid-column: 2;
 }
+
+/* Phase 3: detail pages, control section, dashboard tiles --------------------- */
+.admin-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-link-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  font-weight: 600;
+}
+
+.admin-reg {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  font-size: var(--text-sm);
+}
+
+.checkbox-field--compact {
+  min-height: 0;
+  font-weight: 500;
+  font-size: var(--text-sm);
+}
+
+.inline-form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.inline-form .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-form--wrap {
+  flex-wrap: wrap;
+}
+
+.inline-form--wrap .field {
+  flex: 1 1 160px;
+}
+
+.inline-form .field--narrow {
+  flex: 0 0 72px;
+}
+
+.inline-form .field--grow {
+  flex: 2 1 220px;
+}
+
+.admin-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.admin-facts dt {
+  color: var(--text-muted);
+}
+
+.admin-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.admin-control {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.admin-control__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-control__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.admin-control__body .admin-card {
+  background: var(--bg-subtle);
+  border-color: transparent;
+}
+
+.stat--idle .stat__value {
+  color: var(--text-faint);
+}
+
+.stat--accent .stat__value {
+  color: var(--accent-strong);
+}
+
+.stat--warning .stat__value {
+  color: var(--warning);
+}
+
+.stat--danger .stat__value {
+  color: var(--danger);
+}

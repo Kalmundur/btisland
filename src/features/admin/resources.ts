@@ -2,18 +2,7 @@
  * Declarative admin resource definitions. CrudPage renders list + form from these,
  * so adding a column is a one-line change here.
  */
-import {
-  Building2,
-  CalendarDays,
-  CalendarRange,
-  ClipboardCheck,
-  Layers,
-  ListChecks,
-  Shield,
-  Swords,
-  User,
-  type LucideIcon,
-} from 'lucide-react';
+import { Building2, CalendarDays, CalendarRange, Layers, Shield, User, type LucideIcon } from 'lucide-react';
 import type { AdminRow, AdminTable } from '../../data/adminRepository';
 import type { Translation } from '../../i18n/locales/is';
 
@@ -63,22 +52,15 @@ const REF = {
   player: { table: 'players', order: [{ column: 'full_name' }], label: (r) => str(r.full_name) },
   season: { table: 'seasons', order: [{ column: 'name', ascending: false }], label: (r) => str(r.name) },
   division: { table: 'divisions', order: [{ column: 'sort_order' }], label: (r) => str(r.name) },
-  round: {
-    table: 'rounds',
-    order: [{ column: 'number' }],
-    label: (r) => `#${str(r.number)} · ${str(r.round_date)}`,
-  },
 } satisfies Record<string, RefOptions>;
 
-const ENCOUNTER_STATUSES = [
-  'scheduled',
-  'lineups',
-  'in_progress',
-  'awaiting_confirmation',
-  'completed',
-  'cancelled',
-].map((s) => ({ value: s, labelKey: `status.${s}` }));
+/** Competition formats a division can use (mirrors public.competition_formats). */
+const FORMAT_OPTIONS = [{ value: 'REGULAR_TEN_MATCH', labelKey: 'admin.formats.REGULAR_TEN_MATCH' }];
 
+/**
+ * The organizer portal's sections (Yfirlit is the dashboard). Registrations, teams in a
+ * division and encounters are managed on the player, division and round detail pages.
+ */
 export const RESOURCES: ResourceConfig[] = [
   {
     key: 'clubs',
@@ -87,10 +69,13 @@ export const RESOURCES: ResourceConfig[] = [
     icon: Building2,
     primaryKey: ['id'],
     order: [{ column: 'name' }],
+    detailPath: (row) => `/admin/clubs/${str(row.id)}`,
     fields: [
       { name: 'name', label: 'name', type: 'text', required: true, list: true },
-      { name: 'short_name', label: 'shortName', type: 'text', required: true, list: true },
-      { name: 'is_public', label: 'isPublic', type: 'checkbox', defaultValue: true, list: true },
+      { name: 'short_name', label: 'shortName', type: 'text', list: true },
+      { name: 'logo_url', label: 'logoUrl', type: 'text' },
+      { name: 'is_active', label: 'isActive', type: 'checkbox', defaultValue: true, list: true },
+      { name: 'is_public', label: 'isPublic', type: 'checkbox', defaultValue: true },
     ],
   },
   {
@@ -100,10 +85,12 @@ export const RESOURCES: ResourceConfig[] = [
     icon: Shield,
     primaryKey: ['id'],
     order: [{ column: 'name' }],
+    detailPath: (row) => `/admin/teams/${str(row.id)}`,
     fields: [
       { name: 'name', label: 'name', type: 'text', required: true, list: true },
       { name: 'club_id', label: 'club', type: 'select', required: true, list: true, ref: REF.club },
-      { name: 'is_public', label: 'isPublic', type: 'checkbox', defaultValue: true, list: true },
+      { name: 'is_active', label: 'isActive', type: 'checkbox', defaultValue: true, list: true },
+      { name: 'is_public', label: 'isPublic', type: 'checkbox', defaultValue: true },
     ],
   },
   {
@@ -113,26 +100,12 @@ export const RESOURCES: ResourceConfig[] = [
     icon: User,
     primaryKey: ['id'],
     order: [{ column: 'full_name' }],
+    detailPath: (row) => `/admin/players/${str(row.id)}`,
     fields: [
       { name: 'full_name', label: 'fullName', type: 'text', required: true, list: true },
       { name: 'club_id', label: 'club', type: 'select', required: true, list: true, ref: REF.club },
       { name: 'is_active', label: 'isActive', type: 'checkbox', defaultValue: true, list: true },
       { name: 'is_public', label: 'isPublic', type: 'checkbox', defaultValue: true },
-    ],
-  },
-  {
-    key: 'registrations',
-    table: 'team_registrations',
-    nav: 'registrations',
-    icon: ClipboardCheck,
-    primaryKey: ['id'],
-    order: [{ column: 'created_at', ascending: false }],
-    fields: [
-      { name: 'player_id', label: 'player', type: 'select', required: true, list: true, ref: REF.player },
-      { name: 'team_id', label: 'team', type: 'select', required: true, list: true, ref: REF.team },
-      { name: 'season_id', label: 'season', type: 'select', required: true, list: true, ref: REF.season },
-      { name: 'division_id', label: 'division', type: 'select', required: true, list: true, ref: REF.division },
-      { name: 'is_active', label: 'isActive', type: 'checkbox', defaultValue: true, list: true },
     ],
   },
   {
@@ -156,23 +129,12 @@ export const RESOURCES: ResourceConfig[] = [
     icon: Layers,
     primaryKey: ['id'],
     order: [{ column: 'sort_order' }],
+    detailPath: (row) => `/admin/divisions/${str(row.id)}`,
     fields: [
       { name: 'name', label: 'name', type: 'text', required: true, list: true },
       { name: 'season_id', label: 'season', type: 'select', required: true, list: true, ref: REF.season },
-      { name: 'sort_order', label: 'sortOrder', type: 'number', defaultValue: 0, list: true },
-    ],
-  },
-  {
-    key: 'division-teams',
-    table: 'division_teams',
-    nav: 'divisionTeams',
-    icon: ListChecks,
-    primaryKey: ['division_id', 'team_id'],
-    order: [{ column: 'division_id' }],
-    editable: false,
-    fields: [
-      { name: 'division_id', label: 'division', type: 'select', required: true, list: true, ref: REF.division },
-      { name: 'team_id', label: 'team', type: 'select', required: true, list: true, ref: REF.team },
+      { name: 'format_key', label: 'format', type: 'select', required: true, defaultValue: 'REGULAR_TEN_MATCH', list: true, options: FORMAT_OPTIONS },
+      { name: 'sort_order', label: 'sortOrder', type: 'number', defaultValue: 0 },
     ],
   },
   {
@@ -189,23 +151,6 @@ export const RESOURCES: ResourceConfig[] = [
       { name: 'round_date', label: 'date', type: 'date', required: true, list: true },
       { name: 'start_time', label: 'startTime', type: 'time', list: true },
       { name: 'venue', label: 'venue', type: 'text', list: true },
-    ],
-  },
-  {
-    key: 'encounters',
-    table: 'encounters',
-    nav: 'encounters',
-    icon: Swords,
-    primaryKey: ['id'],
-    detailPath: (row) => `/admin/encounters/${str(row.id)}`,
-    order: [{ column: 'created_at' }],
-    fields: [
-      { name: 'round_id', label: 'round', type: 'select', required: true, list: true, ref: REF.round },
-      { name: 'home_team_id', label: 'homeTeam', type: 'select', required: true, list: true, ref: REF.team },
-      { name: 'away_team_id', label: 'awayTeam', type: 'select', required: true, list: true, ref: REF.team },
-      { name: 'status', label: 'status', type: 'select', required: true, defaultValue: 'scheduled', list: true, options: ENCOUNTER_STATUSES },
-      { name: 'home_score', label: 'homeScore', type: 'number', list: true, readOnly: true },
-      { name: 'away_score', label: 'awayScore', type: 'number', list: true, readOnly: true },
     ],
   },
 ];
