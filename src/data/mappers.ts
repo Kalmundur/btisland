@@ -9,9 +9,13 @@ import type {
   EncounterDetail,
   EncounterGame,
   EncounterStatus,
+  DoublesSelection,
   Lineup,
   LineupSlotLetter,
-  ReconciledSetState,
+  MatchStatus,
+  ReconciledGame,
+  ResultConfirmation,
+  SetEntry,
   Round,
   RoundAccessCode,
   Season,
@@ -63,40 +67,75 @@ export interface EncounterRow {
   away_score: number | null;
   lineups_revealed_at: string | null;
   doubles_revealed_at: string | null;
+  result_hash: string | null;
+  result_version: number;
 }
 export interface EncounterDetailRow extends EncounterRow {
   home_team: { name: string } | null;
   away_team: { name: string } | null;
   round: RoundRow;
 }
-export interface LineupRow {
+interface SelectionRowBase {
   id: string;
   encounter_id: string;
   team_id: string;
   side: TeamSide;
+  version: number;
+  confirmed_count: number;
+  locked_at: string | null;
+  confirmations: Array<{ player_id: string; version: number }>;
+}
+export interface LineupRow extends SelectionRowBase {
   submitted_at: string;
   slots: Array<{ slot: LineupSlotLetter; player_id: string }>;
 }
+export interface DoublesRow extends SelectionRowBase {
+  players: Array<{ player_id: string; position: number }>;
+}
 export interface SetStateRow {
   encounter_id: string;
+  match_number: number;
   game_number: number;
-  set_number: number;
   status: SetStateStatus;
   home_points: number | null;
   away_points: number | null;
+  submitter_count: number;
+}
+export interface SetEntryRow {
+  id: string;
+  encounter_id: string;
+  match_number: number;
+  game_number: number;
+  side: TeamSide;
+  home_points: number;
+  away_points: number;
+  submitted_by_player_id: string;
+  client_entry_id: string;
+  updated_at: string;
 }
 export interface EncounterGameRow {
   id: string;
   encounter_id: string;
-  game_number: number;
+  match_number: number;
   kind: 'singles' | 'doubles';
+  status: MatchStatus;
   home_player1_id: string | null;
   home_player2_id: string | null;
   away_player1_id: string | null;
   away_player2_id: string | null;
-  home_sets: number;
-  away_sets: number;
+  home_games: number;
+  away_games: number;
   winner: TeamSide | null;
+}
+export interface ResultConfirmationRow {
+  id: string;
+  encounter_id: string;
+  side: TeamSide;
+  player_id: string;
+  result_hash: string | null;
+  result_version: number | null;
+  created_at: string;
+  invalidated_at: string | null;
 }
 export interface RoundAccessCodeRow {
   id: string;
@@ -111,7 +150,7 @@ export interface RoundAccessCodeRow {
 /** Column lists kept next to the mappers so selects and mappers stay in sync. */
 export const ROUND_COLUMNS = 'id, division_id, number, round_date, start_time, venue';
 export const ENCOUNTER_COLUMNS =
-  'id, round_id, home_team_id, away_team_id, status, home_score, away_score, lineups_revealed_at, doubles_revealed_at';
+  'id, round_id, home_team_id, away_team_id, status, home_score, away_score, lineups_revealed_at, doubles_revealed_at, result_hash, result_version';
 export const ENCOUNTER_DETAIL_SELECT = `${ENCOUNTER_COLUMNS},
   home_team:teams!encounters_home_team_id_fkey(name),
   away_team:teams!encounters_away_team_id_fkey(name),
@@ -165,6 +204,8 @@ export const toEncounter = (r: EncounterRow): Encounter => ({
   awayScore: r.away_score,
   lineupsRevealedAt: r.lineups_revealed_at,
   doublesRevealedAt: r.doubles_revealed_at,
+  resultHash: r.result_hash,
+  resultVersion: r.result_version,
 });
 
 export const toEncounterDetail = (r: EncounterDetailRow): EncounterDetail => ({
@@ -174,24 +215,56 @@ export const toEncounterDetail = (r: EncounterDetailRow): EncounterDetail => ({
   round: toRound(r.round),
 });
 
-export const toLineup = (r: LineupRow): Lineup => ({
+const toSelectionBase = (r: SelectionRowBase) => ({
   id: r.id,
   encounterId: r.encounter_id,
   teamId: r.team_id,
   side: r.side,
+  version: r.version,
+  confirmedCount: r.confirmed_count,
+  lockedAt: r.locked_at,
+  confirmations: (r.confirmations ?? []).map((c) => ({ playerId: c.player_id, version: c.version })),
+});
+
+export const LINEUP_SELECT =
+  'id, encounter_id, team_id, side, version, confirmed_count, locked_at, submitted_at, slots:lineup_slots(slot, player_id), confirmations:lineup_confirmations(player_id, version)';
+export const DOUBLES_SELECT =
+  'id, encounter_id, team_id, side, version, confirmed_count, locked_at, players:doubles_players(player_id, position), confirmations:doubles_confirmations(player_id, version)';
+
+export const toLineup = (r: LineupRow): Lineup => ({
+  ...toSelectionBase(r),
   submittedAt: r.submitted_at,
-  slots: [...r.slots]
+  slots: [...(r.slots ?? [])]
     .map((s) => ({ slot: s.slot, playerId: s.player_id }))
     .sort((a, b) => a.slot.localeCompare(b.slot)),
 });
 
-export const toSetState = (r: SetStateRow): ReconciledSetState => ({
+export const toDoubles = (r: DoublesRow): DoublesSelection => ({
+  ...toSelectionBase(r),
+  playerIds: [...(r.players ?? [])].sort((a, b) => a.position - b.position).map((p) => p.player_id),
+});
+
+export const toReconciledGame = (r: SetStateRow): ReconciledGame => ({
   encounterId: r.encounter_id,
+  matchNumber: r.match_number,
   gameNumber: r.game_number,
-  setNumber: r.set_number,
   status: r.status,
   homePoints: r.home_points,
   awayPoints: r.away_points,
+  submitterCount: r.submitter_count,
+});
+
+export const toSetEntry = (r: SetEntryRow): SetEntry => ({
+  id: r.id,
+  encounterId: r.encounter_id,
+  matchNumber: r.match_number,
+  gameNumber: r.game_number,
+  side: r.side,
+  homePoints: r.home_points,
+  awayPoints: r.away_points,
+  submittedByPlayerId: r.submitted_by_player_id,
+  clientEntryId: r.client_entry_id,
+  updatedAt: r.updated_at,
 });
 
 const present = (ids: Array<string | null>): string[] => ids.filter((id): id is string => !!id);
@@ -199,13 +272,25 @@ const present = (ids: Array<string | null>): string[] => ids.filter((id): id is 
 export const toEncounterGame = (r: EncounterGameRow): EncounterGame => ({
   id: r.id,
   encounterId: r.encounter_id,
-  gameNumber: r.game_number,
+  matchNumber: r.match_number,
   kind: r.kind,
+  status: r.status,
   homePlayerIds: present([r.home_player1_id, r.home_player2_id]),
   awayPlayerIds: present([r.away_player1_id, r.away_player2_id]),
-  homeSets: r.home_sets,
-  awaySets: r.away_sets,
+  homeGames: r.home_games,
+  awayGames: r.away_games,
   winner: r.winner,
+});
+
+export const toResultConfirmation = (r: ResultConfirmationRow): ResultConfirmation => ({
+  id: r.id,
+  encounterId: r.encounter_id,
+  side: r.side,
+  playerId: r.player_id,
+  resultHash: r.result_hash,
+  resultVersion: r.result_version,
+  createdAt: r.created_at,
+  invalidatedAt: r.invalidated_at,
 });
 
 export const toRoundAccessCode = (r: RoundAccessCodeRow): RoundAccessCode => ({

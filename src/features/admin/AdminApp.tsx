@@ -4,6 +4,7 @@ import { AdminLogin } from './AdminLogin';
 import { AdminDashboard } from './AdminDashboard';
 import { CrudPage } from './CrudPage';
 import { RoundDetailPage } from './RoundDetailPage';
+import { EncounterDetailPage } from './EncounterDetailPage';
 import { RESOURCES } from './resources';
 import { NotFoundPage } from '../NotFoundPage';
 import '../../styles/admin.css';
@@ -22,6 +23,7 @@ export default function AdminApp() {
           <Route key={r.key} path={r.key} element={<CrudPage key={r.key} resource={r} />} />
         ))}
         <Route path="rounds/:roundId" element={<RoundDetailPage />} />
+        <Route path="encounters/:encounterId" element={<EncounterDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

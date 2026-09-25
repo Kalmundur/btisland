@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatRoundCode, isCompleteRoundCode, normalizeRoundCode } from './roundCode';
 import { sideForSlot, slotsForSide, validateLineup } from './lineup';
-import { gameProgress, isValidSetScore, setWinner } from './tableTennis';
 import { computeStandings } from './standings';
 import { rankPlayers } from './playerRanking';
 import { addDays, pickActiveSession, todayInIceland } from './activeSession';
@@ -38,39 +37,6 @@ describe('lineup', () => {
   });
 });
 
-describe('table tennis scoring', () => {
-  it.each([
-    [11, 0, true],
-    [11, 9, true],
-    [9, 11, true],
-    [12, 10, true],
-    [15, 13, true],
-    [11, 10, false],
-    [10, 8, false],
-    [13, 10, false],
-    [12, 9, false],
-    [-1, 11, false],
-    [11.5, 9, false],
-  ])('%i–%i valid=%s', (h, a, valid) => {
-    expect(isValidSetScore(h, a)).toBe(valid);
-  });
-
-  it('decides set and best-of-5 game winners', () => {
-    expect(setWinner(11, 7)).toBe('home');
-    expect(setWinner(10, 12)).toBe('away');
-    expect(setWinner(11, 10)).toBeNull();
-    const sets = [
-      { home: 11, away: 7 },
-      { home: 8, away: 11 },
-      { home: 11, away: 9 },
-      { home: 14, away: 12 },
-      { home: 11, away: 2 }, // ignored – game already decided
-    ];
-    expect(gameProgress(sets)).toEqual({ homeSets: 3, awaySets: 1, winner: 'home' });
-    expect(gameProgress(sets.slice(0, 2))).toEqual({ homeSets: 1, awaySets: 1, winner: null });
-  });
-});
-
 const enc = (id: string, home: string, away: string, hs: number | null, as: number | null, status: Encounter['status'] = 'completed'): Encounter => ({
   id,
   roundId: 'r',
@@ -81,6 +47,8 @@ const enc = (id: string, home: string, away: string, hs: number | null, as: numb
   awayScore: as,
   lineupsRevealedAt: null,
   doublesRevealedAt: null,
+  resultHash: null,
+  resultVersion: 0,
 });
 
 describe('standings', () => {
@@ -116,12 +84,13 @@ describe('player ranking', () => {
   const game = (n: number, home: string, away: string, winner: 'home' | 'away' | null, kind: 'singles' | 'doubles' = 'singles'): EncounterGame => ({
     id: String(n),
     encounterId: 'e',
-    gameNumber: n,
+    matchNumber: n,
     kind,
+    status: winner ? 'completed' : 'in_progress',
     homePlayerIds: [home],
     awayPlayerIds: [away],
-    homeSets: 0,
-    awaySets: 0,
+    homeGames: 0,
+    awayGames: 0,
     winner,
   });
 

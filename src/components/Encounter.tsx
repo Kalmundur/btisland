@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { EncounterDetail, EncounterStatus } from '../domain/types';
@@ -31,10 +32,21 @@ export function EncounterRow({ encounter, showDate }: { encounter: EncounterDeta
   );
 }
 
-/** Large match header used on the scorecard and match pages. */
-export function EncounterHeader({ encounter, highlightTeamId }: { encounter: EncounterDetail; highlightTeamId?: string }) {
+/** Large match header used on the scorecard and match pages. `score` overrides the stored score (live screens pass the derived score). */
+export function EncounterHeader({
+  encounter,
+  highlightTeamId,
+  score,
+  note,
+}: {
+  encounter: EncounterDetail;
+  highlightTeamId?: string;
+  score?: { home: number; away: number } | null;
+  note?: ReactNode;
+}) {
   const { t } = useTranslation();
   const e = encounter;
+  const shown = score ?? (hasScore(e) ? { home: e.homeScore!, away: e.awayScore! } : null);
   const time = formatTime(e.round.startTime);
   const side = (name: string, teamId: string, letters: readonly string[]) => (
     <Link
@@ -55,11 +67,11 @@ export function EncounterHeader({ encounter, highlightTeamId }: { encounter: Enc
       <div className="match-head__teams">
         {side(e.homeTeamName, e.homeTeamId, SLOT_LETTERS.home)}
         <span className="match-head__score num">
-          {hasScore(e) ? (
+          {shown ? (
             <>
-              {e.homeScore}
+              {shown.home}
               <span className="match-head__dash">–</span>
-              {e.awayScore}
+              {shown.away}
             </>
           ) : (
             <span className="match-head__vs">{t('common.vs')}</span>
@@ -67,6 +79,7 @@ export function EncounterHeader({ encounter, highlightTeamId }: { encounter: Enc
         </span>
         {side(e.awayTeamName, e.awayTeamId, SLOT_LETTERS.away)}
       </div>
+      {note && <p className="match-head__note">{note}</p>}
       <p className="match-head__where">
         {formatDate(e.round.date)} · {time ?? t('common.tba')}
         {e.round.venue && (

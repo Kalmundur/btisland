@@ -102,7 +102,7 @@ export function CrudPage({ resource }: { resource: ResourceConfig }) {
                           ))}
                           <td className="admin-table__actions">
                             {resource.detailPath && (
-                              <Link to={resource.detailPath(row)} className="icon-btn" aria-label={t('admin.codes.manage')}>
+                              <Link to={resource.detailPath(row)} className="icon-btn" aria-label={t('admin.match.open')}>
                                 <ChevronRight size={18} aria-hidden />
                               </Link>
                             )}
@@ -158,11 +158,12 @@ function RecordForm({
   pkMatch: (row: AdminRow) => AdminRow;
 }) {
   const { t } = useTranslation();
-  const [values, setValues] = useState<FormValues>(() => initialFormValues(resource.fields, row));
+  const fields = useMemo(() => resource.fields.filter((f) => !f.readOnly), [resource.fields]);
+  const [values, setValues] = useState<FormValues>(() => initialFormValues(fields, row));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
-  const invalid = useMemo(() => invalidFields(resource.fields, values), [resource.fields, values]);
+  const invalid = useMemo(() => invalidFields(fields, values), [fields, values]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -171,7 +172,7 @@ function RecordForm({
     setSaving(true);
     setError(null);
     try {
-      const payload = toRowValues(resource.fields, values);
+      const payload = toRowValues(fields, values);
       if (row) await updateRow(resource.table, pkMatch(row), payload);
       else await insertRow(resource.table, payload);
       onSaved();
@@ -197,7 +198,7 @@ function RecordForm({
           </button>
         </div>
         <div className="sheet__body">
-          {resource.fields.map((f) => {
+          {fields.map((f) => {
             const id = `field-${f.name}`;
             const bad = touched && invalid.includes(f.name);
             if (f.type === 'checkbox') {

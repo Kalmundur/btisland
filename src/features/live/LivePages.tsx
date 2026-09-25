@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { List, ListRow, Section } from '../../components/List';
 import { EncounterHeader, EncounterRow } from '../../components/Encounter';
-import { LineupView } from '../../components/LineupView';
+import { MatchList } from '../../components/MatchList';
+import { OpponentSelectionStatus } from '../scorecard/SelectionPanel';
+import { useOutcomeText } from '../scorecard/ResultPanel';
 import { AsyncBoundary, EmptyState } from '../../components/StateViews';
 import { useLeague } from '../../state/LeagueContext';
 import { useAsync } from '../../hooks/useAsync';
-import { useEncounterData } from '../../hooks/useEncounterData';
+import { useDerivedEncounter, useEncounterData, type EncounterData } from '../../hooks/useEncounterData';
 import {
   getPlayer,
   getRound,
@@ -119,7 +121,7 @@ export function RoundPage() {
   );
 }
 
-/** /live/match/:encounterId – public match view (revealed lineups, decided games). */
+/** /live/match/:encounterId – public live match report, updated in realtime. */
 export function MatchPage() {
   const { t } = useTranslation();
   const { encounterId = '' } = useParams();
@@ -129,43 +131,48 @@ export function MatchPage() {
     <>
       <PageHeader title={t('live.matchTitle')} back backTo="/live" />
       <div className="page">
-        <AsyncBoundary state={data}>
-          {({ encounter, lineups, games, names }) =>
-            !encounter ? (
-              <EmptyState>{t('live.notFound')}</EmptyState>
-            ) : (
-              <>
-                <EncounterHeader encounter={encounter} />
-                <Section title={t('scorecard.lineupTitle')}>
-                  <LineupView encounter={encounter} lineups={lineups} names={names} />
-                </Section>
-                <Section title={t('live.games')}>
-                  {games.length === 0 ? (
-                    <p className="note">{t('live.noGames')}</p>
-                  ) : (
-                    <ul className="list">
-                      {games.map((g) => (
-                        <li key={g.id} className="game-row">
-                          <span className="game-row__no num">{g.gameNumber}</span>
-                          <span className="game-row__players">
-                            {g.kind === 'doubles' && <span className="game-row__kind">{t('live.doubles')}</span>}
-                            {g.homePlayerIds.map((id) => names[id]).join(' / ') || t('common.none')}
-                            <span className="muted"> – </span>
-                            {g.awayPlayerIds.map((id) => names[id]).join(' / ') || t('common.none')}
-                          </span>
-                          <span className="game-row__score num">
-                            {g.homeSets}–{g.awaySets}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Section>
-              </>
-            )
-          }
-        </AsyncBoundary>
+        <AsyncBoundary state={data}>{(d) => <PublicMatch data={d} />}</AsyncBoundary>
       </div>
+    </>
+  );
+}
+
+function PublicMatch({ data }: { data: EncounterData }) {
+  const { t } = useTranslation();
+  const state = useDerivedEncounter(data);
+  const outcome = useOutcomeText(data.encounter, state);
+  const encounter = data.encounter;
+  if (!encounter || !state) return <EmptyState>{t('live.notFound')}</EmptyState>;
+  const revealed = !!encounter.lineupsRevealedAt;
+  return (
+    <>
+      <EncounterHeader
+        encounter={encounter}
+        score={revealed ? { home: state.homeScore, away: state.awayScore } : null}
+        note={outcome}
+      />
+      {!revealed ? (
+        <Section title={t('scorecard.lineupTitle')}>
+          {(['home', 'away'] as const).map((side) => (
+            <OpponentSelectionStatus
+              key={side}
+              label={side === 'home' ? encounter.homeTeamName : encounter.awayTeamName}
+              selection={data.lineups.find((l) => l.side === side)}
+              missingLabel={t('selection.lineupMissing')}
+              lockedLabel={t('selection.lineupLocked')}
+              hiddenNote=""
+            />
+          ))}
+          <p className="note">{t('live.lineupsHidden')}</p>
+        </Section>
+      ) : (
+        <Section title={t('live.games')}>
+          {state.phase1Complete && !encounter.doublesRevealedAt && !state.decided && (
+            <p className="note">{t('match.doublesPending')}</p>
+          )}
+          <MatchList state={state} data={data} showGames publicView />
+        </Section>
+      )}
     </>
   );
 }

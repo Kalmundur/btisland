@@ -1,3 +1,4 @@
+import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { AsyncBoundary, ErrorState, LoadingState, NotConfigured } from '../../components/StateViews';
@@ -9,6 +10,7 @@ import { pickActiveSession, todayInIceland } from '../../domain/activeSession';
 import { ProfileSetup } from './ProfileSetup';
 import { RoundCodeEntry } from './RoundCodeEntry';
 import { ActiveEncounter } from './ActiveEncounter';
+import { SyncIndicator } from '../../components/SyncIndicator';
 
 /**
  * Leikskýrsla tab. Flow:
@@ -52,6 +54,8 @@ export function ScorecardPage() {
 function RoundGate({ userId }: { userId: string }) {
   const { t } = useTranslation();
   const { player } = useProfile();
+  const params = useParams();
+  const matchNumber = params.matchNumber ? Number(params.matchNumber) : null;
   const sessions = useAsync(
     async () => pickActiveSession(await listMySessions(userId), todayInIceland()),
     [userId],
@@ -62,12 +66,13 @@ function RoundGate({ userId }: { userId: string }) {
       <PageHeader
         title={t('scorecard.title')}
         subtitle={player ? t('scorecard.playingAs', { name: player.fullName }) : undefined}
+        actions={<SyncIndicator />}
       />
       <div className="page">
         <AsyncBoundary state={sessions}>
           {(active) =>
             active ? (
-              <ActiveEncounter key={active.id} session={active} onLeft={sessions.reload} />
+              <ActiveEncounter key={active.id} session={active} matchNumber={matchNumber} onLeft={sessions.reload} />
             ) : (
               <RoundCodeEntry onJoined={sessions.reload} />
             )

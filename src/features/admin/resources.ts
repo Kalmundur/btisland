@@ -33,6 +33,8 @@ export interface FieldConfig {
   required?: boolean;
   /** Shown as a column in the list. */
   list?: boolean;
+  /** Derived by the database: listed but never edited. */
+  readOnly?: boolean;
   defaultValue?: unknown;
   ref?: RefOptions;
   /** Static select options: value + i18n key. */
@@ -195,14 +197,15 @@ export const RESOURCES: ResourceConfig[] = [
     nav: 'encounters',
     icon: Swords,
     primaryKey: ['id'],
+    detailPath: (row) => `/admin/encounters/${str(row.id)}`,
     order: [{ column: 'created_at' }],
     fields: [
       { name: 'round_id', label: 'round', type: 'select', required: true, list: true, ref: REF.round },
       { name: 'home_team_id', label: 'homeTeam', type: 'select', required: true, list: true, ref: REF.team },
       { name: 'away_team_id', label: 'awayTeam', type: 'select', required: true, list: true, ref: REF.team },
       { name: 'status', label: 'status', type: 'select', required: true, defaultValue: 'scheduled', list: true, options: ENCOUNTER_STATUSES },
-      { name: 'home_score', label: 'homeScore', type: 'number', list: true },
-      { name: 'away_score', label: 'awayScore', type: 'number', list: true },
+      { name: 'home_score', label: 'homeScore', type: 'number', list: true, readOnly: true },
+      { name: 'away_score', label: 'awayScore', type: 'number', list: true, readOnly: true },
     ],
   },
 ];

@@ -723,35 +723,6 @@
   color: var(--text-muted);
 }
 
-.lineup {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.lineup td {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.lineup__letter {
-  width: 28px;
-  font-weight: 900;
-  color: var(--accent);
-  font-size: var(--text-md);
-}
-
-.lineup__cell {
-  padding-right: var(--space-2) !important;
-}
-
-.lineup__name {
-  font-weight: 600;
-  font-size: var(--text-sm);
-  overflow-wrap: anywhere;
-}
-
 .placeholder {
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-md);
@@ -759,33 +730,6 @@
   text-align: center;
   color: var(--text-muted);
   font-size: var(--text-sm);
-}
-
-.game-row {
-  display: grid;
-  grid-template-columns: 24px 1fr auto;
-  gap: var(--space-3);
-  align-items: center;
-  min-height: 52px;
-  font-size: var(--text-sm);
-}
-
-.game-row__no {
-  color: var(--text-faint);
-  font-weight: 700;
-}
-
-.game-row__kind {
-  display: block;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.game-row__score {
-  font-weight: 800;
-  font-size: var(--text-lg);
 }
 
 /* ==========================================================================

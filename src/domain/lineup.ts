@@ -18,7 +18,20 @@ export type LineupDraft = Partial<Record<LineupSlotLetter, UUID>>;
 
 export type LineupValidationError = 'incomplete' | 'wrong_side' | 'duplicate_player';
 
-/** Mirrors the server-side checks in submit_lineup() so the UI can give instant feedback. */
+export type DoublesValidationError = 'incomplete' | 'duplicate_player' | 'not_on_roster';
+
+/** Two different players from the team roster (they need not be in the singles lineup). */
+export function validateDoubles(
+  pair: ReadonlyArray<UUID | undefined>,
+  roster: ReadonlyArray<UUID>,
+): DoublesValidationError | null {
+  if (pair.length !== 2 || pair.some((p) => !p)) return 'incomplete';
+  if (pair[0] === pair[1]) return 'duplicate_player';
+  if (pair.some((p) => !roster.includes(p!))) return 'not_on_roster';
+  return null;
+}
+
+/** Mirrors the server-side checks in propose_lineup() so the UI can give instant feedback. */
 export function validateLineup(side: TeamSide, draft: LineupDraft): LineupValidationError | null {
   const letters = Object.keys(draft) as LineupSlotLetter[];
   if (letters.some((l) => sideForSlot(l) !== side)) return 'wrong_side';

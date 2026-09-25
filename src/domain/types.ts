@@ -92,6 +92,9 @@ export interface Encounter {
   awayScore: number | null;
   lineupsRevealedAt: string | null;
   doublesRevealedAt: string | null;
+  /** Fingerprint of the current reconciled result; confirmations are bound to it. */
+  resultHash: string | null;
+  resultVersion: number;
 }
 
 /** Encounter with team names and round – what most screens render. */
@@ -151,35 +154,88 @@ export interface LineupSlot {
   playerId: UUID;
 }
 
-export interface Lineup {
+export interface SelectionConfirmation {
+  playerId: UUID;
+  version: number;
+}
+
+/** Common shape of a team's lineup and doubles selection (versioned, two-person confirmed). */
+export interface TeamSelection {
   id: UUID;
   encounterId: UUID;
   teamId: UUID;
   side: TeamSide;
+  version: number;
+  /** Distinct players who confirmed the current version (maintained by the server). */
+  confirmedCount: number;
+  lockedAt: string | null;
+  /** Visible to your own team before reveal; to everybody afterwards (RLS). */
+  confirmations: SelectionConfirmation[];
+}
+
+export interface Lineup extends TeamSelection {
   submittedAt: string;
+  /** Empty for the opponent until both lineups are locked. */
   slots: LineupSlot[];
 }
 
-export interface ReconciledSetState {
+export interface DoublesSelection extends TeamSelection {
+  /** Ordered pair; empty for the opponent until both pairs are locked. */
+  playerIds: UUID[];
+}
+
+/** Canonical state of one game ("lota"), maintained by the database. */
+export interface ReconciledGame {
   encounterId: UUID;
+  matchNumber: number;
   gameNumber: number;
-  setNumber: number;
+  /** agreed: all submissions identical. conflict: they differ (points hidden). */
   status: SetStateStatus;
   homePoints: number | null;
   awayPoints: number | null;
+  submitterCount: number;
 }
 
-/** Summary of one individual game (singles/doubles) inside an encounter. */
+/** One scorer's own entry for one game. */
+export interface SetEntry {
+  id: UUID;
+  encounterId: UUID;
+  matchNumber: number;
+  gameNumber: number;
+  side: TeamSide;
+  homePoints: number;
+  awayPoints: number;
+  submittedByPlayerId: UUID;
+  clientEntryId: UUID;
+  updatedAt: string;
+}
+
+export type MatchStatus = 'locked' | 'available' | 'in_progress' | 'conflict' | 'completed' | 'not_played';
+
+/** Server-derived summary of one individual match (singles/doubles) inside an encounter. */
 export interface EncounterGame {
   id: UUID;
   encounterId: UUID;
-  gameNumber: number;
+  matchNumber: number;
   kind: 'singles' | 'doubles';
+  status: MatchStatus;
   homePlayerIds: UUID[];
   awayPlayerIds: UUID[];
-  homeSets: number;
-  awaySets: number;
+  homeGames: number;
+  awayGames: number;
+  /** Only set for counted matches. */
   winner: TeamSide | null;
+}
+
+export interface ResultConfirmation {
+  id: UUID;
+  encounterId: UUID;
+  side: TeamSide;
+  playerId: UUID;
+  resultHash: string | null;
+  resultVersion: number | null;
+  createdAt: string;
+  invalidatedAt: string | null;
 }
 
 export interface StandingRow {

@@ -21,6 +21,7 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/scorecard" replace /> },
       // The four permanent tabs
       { path: 'scorecard', element: <ScorecardPage /> },
+      { path: 'scorecard/match/:matchNumber', element: <ScorecardPage /> },
       { path: 'standings', element: <StandingsPage /> },
       { path: 'players', element: <PlayersPage /> },
       { path: 'settings', element: <SettingsPage /> },
