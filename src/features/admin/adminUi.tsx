@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
+import { useErrorText } from '../../hooks/useErrorText';
 
 export function AdminCard({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
   return (
@@ -58,7 +59,7 @@ export function AdminSelect({
  */
 export function useAdminAction(onDone: () => void) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError(null);
@@ -67,7 +68,7 @@ export function useAdminAction(onDone: () => void) {
       onDone();
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
       return false;
     } finally {
       setBusy(false);
@@ -76,12 +77,12 @@ export function useAdminAction(onDone: () => void) {
   return { busy, error, run };
 }
 
-export function AdminError({ error }: { error: string | null }) {
-  const { t } = useTranslation();
+export function AdminError({ error }: { error: unknown }) {
+  const errorText = useErrorText('match.errors');
   if (!error) return null;
   return (
     <p className="form-error" role="alert">
-      {t('admin.crud.saveFailed', { message: error })}
+      {errorText(error)}
     </p>
   );
 }

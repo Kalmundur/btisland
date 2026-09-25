@@ -2,7 +2,8 @@
  * Generates supabase/seed.sql from seed/leagueSeed.ts.
  * Run with: npm run seed:generate  (Node >= 22.18 strips TypeScript types natively)
  */
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   SEED_CLUBS,
@@ -72,6 +73,9 @@ out(
   `insert into public.encounters (round_id, home_team_id, away_team_id)\nselect r.id, ht.id, at.id from (values\n${encounterRows.join(',\n')}\n) as v(round_number, home, away)\njoin public.rounds r on r.number = v.round_number\njoin public.divisions d on d.id = r.division_id and d.name = ${q(SEED_DIVISION.name)}\njoin public.seasons s on s.id = d.season_id and s.name = ${q(SEED_SEASON.name)}\njoin public.teams ht on ht.name = v.home\njoin public.teams at on at.name = v.away;`,
 );
 out();
+// Everything above is real league data; everything below is development-only.
+const leagueLines = [...lines];
+
 out('-- ----------------------------------------------------------------------------');
 out('-- DEVELOPMENT SEED ACCESS CODES – publicly known, NOT for production use.');
 out('-- Regenerate every code in the admin portal (Rounds -> Regenerate) before a real round.');
@@ -82,6 +86,24 @@ out(
 out();
 out('commit;');
 
-const target = fileURLToPath(new URL('../supabase/seed.sql', import.meta.url));
-writeFileSync(target, lines.join('\n') + '\n', 'utf8');
-console.log(`Wrote ${target}`);
+// 1) Development seed (run by `supabase db reset`): league data + public dev access codes.
+const devTarget = fileURLToPath(new URL('../supabase/seed.sql', import.meta.url));
+writeFileSync(devTarget, lines.join('\n') + '\n', 'utf8');
+console.log(`Wrote ${devTarget}`);
+
+// 2) Production league data: the same clubs/teams/players/schedule WITHOUT any access codes.
+//    Never run automatically – apply once, manually, to an empty production database.
+//    Organizers create real codes in the admin portal (Umferðir -> round -> Búa til kóða).
+const prodLines = [
+  '-- ============================================================================',
+  '-- PRODUCTION league data (no access codes). Apply ONCE, manually, to an empty',
+  '-- production database: SQL editor, or psql "$PROD_DB_URL" -f <this file>.',
+  '-- Generated from seed/leagueSeed.ts by npm run seed:generate – do not edit by hand.',
+  '-- ============================================================================',
+  ...leagueLines.slice(leagueLines.indexOf('begin;')),
+  'commit;',
+];
+const prodTarget = fileURLToPath(new URL('../supabase/production/league-2026-2027.sql', import.meta.url));
+mkdirSync(dirname(prodTarget), { recursive: true });
+writeFileSync(prodTarget, prodLines.join('\n') + '\n', 'utf8');
+console.log(`Wrote ${prodTarget}`);

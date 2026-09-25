@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/Button';
 import { NotConfigured } from '../../components/StateViews';
@@ -16,6 +16,7 @@ export function AdminLogin() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const expired = (useLocation().state as { expired?: boolean } | null)?.expired === true;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -62,6 +63,7 @@ export function AdminLogin() {
                 required
               />
             </label>
+            {expired && !failed && <p className="warning-text">{t('admin.login.expired')}</p>}
             {failed && (
               <p className="form-error" role="alert">
                 {t('admin.login.failed')}

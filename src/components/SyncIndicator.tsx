@@ -14,12 +14,14 @@ export function SyncIndicator() {
   return (
     <button
       type="button"
-      className={`sync-pill sync-pill--${status}`}
+      className="sync-pill"
       onClick={() => void scoreOutbox.flush()}
       aria-live="polite"
     >
-      {icon}
-      {label}
+      <span className={`sync-pill__body sync-pill--${status}`}>
+        {icon}
+        {label}
+      </span>
     </button>
   );
 }

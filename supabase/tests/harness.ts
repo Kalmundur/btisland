@@ -20,11 +20,16 @@ create function auth.uid() returns uuid language sql stable as
 create publication supabase_realtime;
 `;
 
-const SUPABASE_GRANTS = `
+/**
+ * Like Supabase: API roles get privileges on objects *as they are created* (default
+ * privileges), so REVOKEs inside migrations stay in force.
+ */
+const SUPABASE_DEFAULT_PRIVILEGES = `
 grant usage on schema public to anon, authenticated;
-grant all on all tables in schema public to anon, authenticated;
-grant usage on schema extensions to anon, authenticated;
 grant usage on schema auth to anon, authenticated;
+alter default privileges in schema public grant all on tables to anon, authenticated;
+alter default privileges in schema public grant all on sequences to anon, authenticated;
+alter default privileges in schema public grant execute on functions to anon, authenticated;
 `;
 
 export interface TestDb {
@@ -36,14 +41,15 @@ export interface TestDb {
   playerId(fullName: string): Promise<string>;
 }
 
-export async function createTestDb(): Promise<TestDb> {
+export async function createTestDb(options: { seed?: boolean } = {}): Promise<TestDb> {
   const db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(SUPABASE_STUBS);
+  await db.exec(SUPABASE_DEFAULT_PRIVILEGES);
   for (const file of readdirSync(`${root}/migrations`).sort()) {
     await db.exec(readFileSync(`${root}/migrations/${file}`, 'utf8'));
   }
-  await db.exec(SUPABASE_GRANTS);
-  await db.exec(readFileSync(`${root}/seed.sql`, 'utf8'));
+  await db.exec('grant usage on schema extensions to anon, authenticated;');
+  if (options.seed !== false) await db.exec(readFileSync(`${root}/seed.sql`, 'utf8'));
 
   const query = async <T,>(sql: string, params?: unknown[]) => (await db.query<T>(sql, params)).rows;
 

@@ -50,12 +50,6 @@ export async function listRowsWhere(
   return unwrap(await query) as AdminRow[];
 }
 
-export async function countRows(table: AdminTable): Promise<number> {
-  const { count, error } = await requireSupabase().from(table).select('*', { count: 'exact', head: true });
-  if (error) throw error;
-  return count ?? 0;
-}
-
 // Round access codes --------------------------------------------------------------------
 
 export async function listRoundCodes(roundId: UUID): Promise<RoundAccessCode[]> {

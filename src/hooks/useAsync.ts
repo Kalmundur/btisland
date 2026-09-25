@@ -27,7 +27,7 @@ export function useAsync<T>(load: () => Promise<T>, deps: DependencyList): Async
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // `load` is intentionally not a dependency: callers pass the values it closes over in `deps`.
   }, [...deps, nonce]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);

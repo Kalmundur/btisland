@@ -8,7 +8,9 @@ import { AsyncBoundary, EmptyState } from '../../components/StateViews';
 import { useAsync } from '../../hooks/useAsync';
 import { deleteRow, insertRow, listRows, updateRow, type AdminRow } from '../../data/adminRepository';
 import { matchesSearch } from '../../domain/search';
+import { errorKey } from '../../lib/errors';
 import type { FieldConfig, ResourceConfig } from './resources';
+import { useDialog } from '../../hooks/useDialog';
 import { initialFormValues, invalidFields, toRowValues, type FormValues } from './formValues';
 
 type Options = Record<string, Array<{ value: string; label: string }>>;
@@ -53,7 +55,7 @@ export function CrudPage({ resource }: { resource: ResourceConfig }) {
       await deleteRow(resource.table, pkMatch(row));
       data.reload();
     } catch (e) {
-      window.alert(t('admin.crud.deleteFailed', { message: e instanceof Error ? e.message : '' }));
+      window.alert(t('admin.crud.deleteFailed', { message: t(errorKey(e)) }));
     }
   };
 
@@ -177,16 +179,17 @@ function RecordForm({
       else await insertRow(resource.table, payload);
       onSaved();
     } catch (err) {
-      setError(t('admin.crud.saveFailed', { message: err instanceof Error ? err.message : '' }));
+      setError(t('admin.crud.saveFailed', { message: t(errorKey(err)) }));
     } finally {
       setSaving(false);
     }
   };
 
   const set = (name: string, v: string | boolean) => setValues((prev) => ({ ...prev, [name]: v }));
+  const dialogRef = useDialog<HTMLDivElement>(true, onClose);
 
   return (
-    <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="record-form-title">
+    <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="record-form-title" ref={dialogRef}>
       <div className="sheet__backdrop" onClick={onClose} />
       <form className="sheet__panel" onSubmit={submit} noValidate>
         <div className="sheet__head">

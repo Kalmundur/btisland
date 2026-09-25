@@ -1,13 +1,17 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, DatabaseZap } from 'lucide-react';
+import { AlertTriangle, DatabaseZap, WifiOff } from 'lucide-react';
 import { Button } from './Button';
+import { classifyError, errorKey } from '../lib/errors';
 
-export function LoadingState() {
+/** Compact skeleton rows – small queries never blank the whole screen. */
+export function LoadingState({ rows = 3 }: { rows?: number }) {
   const { t } = useTranslation();
   return (
-    <div className="state" role="status" aria-live="polite">
-      <span className="spinner" aria-hidden />
+    <div className="skeleton" role="status" aria-busy="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <span key={i} className="skeleton__row" />
+      ))}
       <span className="visually-hidden">{t('common.loading')}</span>
     </div>
   );
@@ -22,14 +26,15 @@ export function EmptyState({ children, icon }: { children: ReactNode; icon?: Rea
   );
 }
 
+/** Human-readable error (never the raw database message) with an optional retry. */
 export function ErrorState({ error, onRetry }: { error?: unknown; onRetry?: () => void }) {
   const { t } = useTranslation();
-  const detail = error instanceof Error ? error.message : null;
+  const kind = classifyError(error);
+  const Icon = kind === 'offline' || kind === 'network' ? WifiOff : AlertTriangle;
   return (
     <div className="state" role="alert">
-      <AlertTriangle size={28} className="state__icon state__icon--danger" aria-hidden />
-      <p className="state__text">{t('common.error')}</p>
-      {detail && <p className="state__detail">{detail}</p>}
+      <Icon size={28} className="state__icon state__icon--danger" aria-hidden />
+      <p className="state__text">{t(errorKey(error))}</p>
       {onRetry && (
         <Button variant="secondary" size="sm" onClick={onRetry}>
           {t('common.retry')}
@@ -56,14 +61,17 @@ export function NotConfigured() {
 export function AsyncBoundary<T>({
   state,
   children,
+  rows,
 }: {
   state: { data: T | undefined; error: unknown; loading: boolean; reload: () => void };
   children: (data: T) => ReactNode;
+  /** Skeleton size while loading. */
+  rows?: number;
 }) {
   if (state.error && state.data === undefined) {
-    if (state.error instanceof Error && state.error.name === 'SupabaseNotConfiguredError') return <NotConfigured />;
+    if (classifyError(state.error) === 'notConfigured') return <NotConfigured />;
     return <ErrorState error={state.error} onRetry={state.reload} />;
   }
-  if (state.data === undefined) return <LoadingState />;
+  if (state.data === undefined) return <LoadingState rows={rows} />;
   return <>{children(state.data)}</>;
 }

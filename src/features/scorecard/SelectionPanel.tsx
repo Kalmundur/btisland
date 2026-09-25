@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, CheckCircle2, Lock } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { selectionProgress } from '../../domain/confirmation';
-import { rpcErrorKey } from '../../data/encounterRepository';
+import { useErrorText } from '../../hooks/useErrorText';
 import type { PlayerListItem, TeamSelection } from '../../domain/types';
 
 /**
@@ -38,6 +38,7 @@ export function SelectionPanel({
   onConfirm: (version: number) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const errorText = useErrorText('selection.errors');
   const progress = selectionProgress(selection, myPlayerId);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string | undefined>>({});
@@ -57,7 +58,7 @@ export function SelectionPanel({
       await fn();
       setEditing(false);
     } catch (e) {
-      setError(rpcErrorKey(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -66,7 +67,7 @@ export function SelectionPanel({
   const submit = () => {
     const problem = validate(draft);
     if (problem) {
-      setError(problem);
+      setError(t(`selection.errors.${problem}`, { defaultValue: t('selection.errors.generic') }));
       return;
     }
     void run(() => onPropose(draft as Record<string, string>));
@@ -117,7 +118,7 @@ export function SelectionPanel({
           ))}
           {error && (
             <p className="form-error" role="alert">
-              {t(`selection.errors.${error}`, { defaultValue: t('selection.errors.generic') })}
+              {error}
             </p>
           )}
           <div className="button-stack">
@@ -154,7 +155,7 @@ export function SelectionPanel({
               </p>
               {error && (
                 <p className="form-error" role="alert">
-                  {t(`selection.errors.${error}`, { defaultValue: t('selection.errors.generic') })}
+                  {error}
                 </p>
               )}
               <div className="button-stack">

@@ -2,7 +2,12 @@
 
 Phone-first web app for the Icelandic table tennis league: player scorecard, public standings/results and an organizer portal.
 
-The app name is set in one place: `src/config/app.ts` (`APP_NAME`).
+The app name is set in one place: `src/config/app.ts` (`APP_NAME`). The app is an installable PWA.
+
+**More documentation:**
+- [DEPLOYMENT.md](DEPLOYMENT.md): Vercel, dev/prod Supabase, migrations, organizer bootstrap.
+- [QA.md](QA.md): end-to-end manual test script.
+- [CAPACITOR.md](CAPACITOR.md): the future iOS/Android path.
 
 **Stack:** React 19 · TypeScript · Vite · React Router · Supabase (Postgres, RLS, Realtime, Auth) · react-i18next · lucide-react · plain CSS with design tokens · Vitest.
 
@@ -28,7 +33,9 @@ The app builds and runs without credentials. Screens that need the database show
 | `npm run typecheck` | TypeScript check (app + node configs) |
 | `npm test` | Vitest: domain logic, offline outbox, seed integrity, translations, admin forms, and database tests (migrations + RLS + RPCs + triggers in in-memory Postgres) |
 | `npm run build` | Typecheck + production build to `dist/` |
-| `npm run seed:generate` | Regenerate `supabase/seed.sql` from `seed/leagueSeed.ts` |
+| `npm run seed:generate` | Regenerate `supabase/seed.sql` (dev, with dev codes) and `supabase/production/league-2026-2027.sql` (no codes) from `seed/leagueSeed.ts` |
+| `npm run icons:generate` | Regenerate the placeholder PWA icons in `public/icons` |
+| `npm run preview` | Serve the production build locally (service worker active) |
 
 ## 2. Environment variables
 
@@ -47,15 +54,17 @@ Only the **public anon key** goes in the frontend. Never put the service-role ke
 2. **Authentication → Sign In / Providers**:
    - enable **Allow anonymous sign-ins** (ordinary players sign in anonymously in the background);
    - keep **Email** enabled (organizers use email and password).
-3. Apply the migrations, either with the CLI (see below) or by running the three files in `supabase/migrations/` in order in the SQL editor.
-4. Seed: run `supabase/seed.sql` in the SQL editor, or run `psql "$DB_URL" -f supabase/seed.sql`.
+3. Apply the migrations, either with the CLI (see below) or by running every file in `supabase/migrations/` in order in the SQL editor.
+4. Seed:
+   - **Development project:** run `supabase/seed.sql`. It includes public dev access codes.
+   - **Production project:** never run `seed.sql`; see [DEPLOYMENT.md](DEPLOYMENT.md).
 5. Create an organizer:
    - **Authentication → Users → Add user** (email + password, auto-confirm);
    - in the SQL editor:
      ```sql
-     insert into public.organizers (user_id)
-     select id from auth.users where email = 'you@example.com';
+     select public.grant_organizer('you@example.com');
      ```
+     This is callable only by the project owner, never from the app, and is audited.
 6. Put the URL and anon key in `.env.local` (and in Vercel's environment variables when deploying).
 
 ### Option B: local Supabase (Docker + Supabase CLI)
@@ -94,12 +103,13 @@ src/
   state/         Auth / League / Profile React contexts
   hooks/         useAsync, useEncounterData (realtime-refreshing encounter bundle)
   offline/       IndexedDB score outbox + sync status
+  lib/           supabase client, storage, errors, connectivity, PWA registration, formatting
   components/    small UI kit: BottomNav, PageHeader, List, Button, inputs, encounter views
   features/      scorecard, standings, players, settings, live (public deep links), admin
   i18n/          is (default) + en; en is type-checked against is, and a test checks key parity
   styles/        tokens.css (all colours/spacing/radius/control sizes), base, components, admin
 supabase/
-  migrations/    schema → security (RLS) → RPCs → match workflow → postponed status → league admin
+  migrations/    schema → security (RLS) → RPCs → match workflow → postponed status → league admin → hardening
   seed.sql       generated
   tests/         database tests: real migrations + seed in PGlite (in-memory Postgres)
 ```
@@ -128,6 +138,9 @@ If more than one encounter matches, it returns the choices instead of guessing. 
   - unrevealed lineups and doubles pairs: your own team only (organizers always).
 - **Player writes** go only through RPCs that check the caller's round session: `propose_lineup`, `confirm_lineup`, `propose_doubles`, `confirm_doubles`, `submit_game_score` and `confirm_result`.
 - **Organizer writes** require a row in `public.organizers` (`is_organizer()`).
+- **Column privileges:** auth user ids (device identities) are never readable through the API.
+- **No direct writes by API roles** to entries, reconciled state, confirmations or sessions: only the audited `SECURITY DEFINER` functions write them.
+- `supabase/tests/security.test.ts` asserts all of the above.
 - **Audit:** triggers write every change on the main tables to `audit_log`.
 
 ### Realtime
@@ -168,6 +181,13 @@ If more than one encounter matches, it returns the choices instead of guessing. 
 - A joined round stays active on the Scorecard until the day after the round date.
 - Dates are formatted from built-in Icelandic/English month and weekday names, not `Intl`. Some Chromium builds and Android WebViews lack Icelandic locale data and silently fall back to English.
 - Correcting an earlier game can move an encounter back from "awaiting confirmation" to "in progress" (e.g. a conflict appears); raw entries are never deleted and every change is also in `audit_log`.
+- **PWA** (`vite-plugin-pwa`):
+  - Only the static app shell is precached; there are no runtime caching rules, so Supabase API, auth and realtime responses are never cached.
+  - A new version shows an **Uppfæra** banner instead of reloading by itself.
+  - The service worker is not registered inside a native Capacitor shell.
+- **Connectivity:** an offline banner explains what still works (score entry is queued) and what needs a connection.
+  - If a realtime channel drops, screens show *"Rauntímauppfærslur tafðar"* and poll every 15 s until it reconnects.
+- **Errors** are classified (`src/lib/errors.ts`) and shown as Icelandic/English messages. Raw database errors are never shown.
 - The admin portal is a lazily loaded chunk, so players never download it.
 - The `Database` generic for supabase-js is not generated yet. Row shapes live in `src/data/mappers.ts`. Once the schema settles, run `npx supabase gen types typescript` and switch to typed clients.
 

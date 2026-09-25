@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 
@@ -14,14 +14,24 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, back, backTo = '/', actions }: PageHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
-  const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate(backTo);
-  };
+  const ref = useRef<HTMLElement>(null);
+  // A shared link opened directly has no in-app history: go to the parent page instead.
+  const goBack = () => (location.key !== 'default' ? navigate(-1) : navigate(backTo, { replace: true }));
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const publish = () => document.documentElement.style.setProperty('--page-header-h', `${node.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <header className="page-header">
+    <header className="page-header" ref={ref}>
       <div className="page-header__inner">
         {back && (
           <button type="button" className="icon-btn page-header__back" onClick={goBack} aria-label={t('common.back')}>

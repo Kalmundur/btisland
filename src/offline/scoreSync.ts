@@ -2,6 +2,7 @@
  * App-wide score outbox: IndexedDB-backed, retried on reconnect, on an interval and at startup.
  */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useOnline } from '../lib/connectivity';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { submitGameScore } from '../data/encounterRepository';
 import { indexedDbStore } from './idbStore';
@@ -38,21 +39,6 @@ export function newClientEntryId(): string {
 
 export function useOutbox(): OutboxSnapshot {
   return useSyncExternalStore(scoreOutbox.subscribe, scoreOutbox.getSnapshot);
-}
-
-function useOnline(): boolean {
-  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
-  useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    return () => {
-      window.removeEventListener('online', on);
-      window.removeEventListener('offline', off);
-    };
-  }, []);
-  return online;
 }
 
 export type SyncStatus = 'hidden' | 'synced' | 'unsynced' | 'offline';

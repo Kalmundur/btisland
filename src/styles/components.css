@@ -86,7 +86,7 @@
   min-height: var(--touch-min);
   min-width: var(--touch-min);
   color: var(--text-faint);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 500;
   letter-spacing: 0.01em;
 }
@@ -521,7 +521,7 @@
 }
 
 .segmented__item {
-  min-height: calc(var(--control-height) - 8px);
+  min-height: var(--touch-min);
   border: 0;
   border-radius: calc(var(--radius-md) - 3px);
   background: transparent;
@@ -790,4 +790,107 @@
     padding-left: 0;
     padding-right: 0;
   }
+}
+
+/* ==========================================================================
+   Keyboard open (Android): the fixed nav would cover the focused input.
+   ========================================================================== */
+.app--keyboard .bottom-nav {
+  display: none;
+}
+
+.app--keyboard .app-main {
+  padding-bottom: var(--space-6);
+}
+
+/* ==========================================================================
+   Compact loading skeleton
+   ========================================================================== */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.skeleton__row {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton__row:nth-child(2) {
+  width: 82%;
+}
+
+.skeleton__row:nth-child(3) {
+  width: 64%;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ==========================================================================
+   Connectivity / update banners
+   ========================================================================== */
+.banners:empty {
+  display: none;
+}
+
+.banners {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-4) 0;
+  padding-top: calc(var(--space-2) + var(--safe-top));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
+.banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.banner--offline {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.banner--muted {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+.banner--update {
+  align-items: center;
+  justify-content: space-between;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.banner__action {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
 }

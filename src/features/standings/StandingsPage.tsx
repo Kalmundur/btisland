@@ -50,6 +50,7 @@ export function StandingsPage() {
                   ))}
                 </tbody>
               </table>
+              {d.standings.every((r) => r.played === 0) && <p className="note note--inset">{t('standings.noResultsYet')}</p>}
               <p className="note note--inset">{t('standings.legend')}</p>
               <List>
                 <ListRow to="/live" leading={<CalendarDays size={20} aria-hidden />} title={t('standings.schedule')} chevron />

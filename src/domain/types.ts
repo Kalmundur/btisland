@@ -68,15 +68,6 @@ export interface PlayerListItem {
   teamName: string | null;
 }
 
-export interface TeamRegistration {
-  id: UUID;
-  playerId: UUID;
-  teamId: UUID;
-  seasonId: UUID;
-  divisionId: UUID;
-  isActive: boolean;
-}
-
 export interface Round {
   id: UUID;
   divisionId: UUID;

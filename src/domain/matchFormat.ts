@@ -52,15 +52,8 @@ const REGULAR_TEN_MATCH: CompetitionFormat = {
 export const COMPETITION_FORMATS: Record<CompetitionFormatKey, CompetitionFormat> = { REGULAR_TEN_MATCH };
 export const DEFAULT_FORMAT: CompetitionFormat = REGULAR_TEN_MATCH;
 
-export function isCompetitionFormatKey(key: string): key is CompetitionFormatKey {
-  return key in COMPETITION_FORMATS;
-}
-
 // Regular-format shortcuts used throughout the scoring UI.
 export const MATCH_FORMAT = REGULAR_TEN_MATCH.matches;
-export const MATCH_COUNT = MATCH_FORMAT.length;
-export const DOUBLES_MATCH = 7;
-export const WINS_TO_TAKE_ENCOUNTER = REGULAR_TEN_MATCH.winsToTakeEncounter;
 
 export function matchFormat(number: number): MatchFormatEntry {
   const entry = MATCH_FORMAT.find((m) => m.number === number);

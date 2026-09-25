@@ -6,6 +6,7 @@ import { List, Section } from '../../components/List';
 import { joinRound } from '../../data/roundRepository';
 import { getEncounter } from '../../data/leagueRepository';
 import { isCompleteRoundCode } from '../../domain/roundCode';
+import { classifyError } from '../../lib/errors';
 import type { EncounterDetail, JoinRoundResult } from '../../domain/types';
 
 type ErrorKey = Exclude<JoinRoundResult['status'], 'joined' | 'choose'> | 'generic';
@@ -31,8 +32,9 @@ export function RoundCodeEntry({ onJoined }: { onJoined: () => void }) {
       } else {
         setError(result.status);
       }
-    } catch {
-      setError('generic');
+    } catch (e) {
+      const kind = classifyError(e);
+      setError(kind === 'offline' || kind === 'network' ? 'not_authenticated' : 'generic');
     } finally {
       setBusy(false);
     }

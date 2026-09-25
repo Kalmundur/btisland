@@ -7,7 +7,8 @@
  * - Each entry carries an idempotent clientEntryId, so re-sending after a lost ack is safe.
  * - An entry is removed only after the server acknowledged it (or rejected it outright).
  */
-import type { UUID } from '../domain/types';
+/** Kept free of app imports so database integration tests can use it directly. */
+type UUID = string;
 
 export interface OutboxEntry {
   clientEntryId: UUID;
@@ -54,11 +55,12 @@ export class Outbox {
   private listeners = new Set<() => void>();
   private flushPromise: Promise<void> | null = null;
   private loaded: Promise<void>;
+  private readonly store: OutboxStore;
+  private readonly send: (entry: OutboxEntry) => Promise<SendResult>;
 
-  constructor(
-    private readonly store: OutboxStore,
-    private readonly send: (entry: OutboxEntry) => Promise<SendResult>,
-  ) {
+  constructor(store: OutboxStore, send: (entry: OutboxEntry) => Promise<SendResult>) {
+    this.store = store;
+    this.send = send;
     this.loaded = this.reload();
   }
 

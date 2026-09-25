@@ -5,9 +5,9 @@
  */
 import type { PostgrestError } from '@supabase/supabase-js';
 import { requireSupabase } from '../lib/supabase';
+import { reportChannel } from '../lib/connectivity';
 import type {
   DoublesSelection,
-  EncounterGame,
   Lineup,
   LineupSlotLetter,
   ReconciledGame,
@@ -19,19 +19,17 @@ import {
   DOUBLES_SELECT,
   LINEUP_SELECT,
   toDoubles,
-  toEncounterGame,
   toLineup,
   toReconciledGame,
   toResultConfirmation,
   toSetEntry,
   type DoublesRow,
-  type EncounterGameRow,
   type LineupRow,
   type ResultConfirmationRow,
   type SetEntryRow,
   type SetStateRow,
 } from './mappers';
-import { DataError, unwrap } from './result';
+import { unwrap } from './result';
 
 const db = () => requireSupabase();
 
@@ -68,13 +66,6 @@ export async function listSetEntries(encounterId: UUID): Promise<SetEntry[]> {
       .eq('encounter_id', encounterId),
   ) as SetEntryRow[];
   return rows.map(toSetEntry);
-}
-
-export async function listGames(encounterId: UUID): Promise<EncounterGame[]> {
-  const rows = unwrap(
-    await db().from('encounter_games').select('*').eq('encounter_id', encounterId).order('match_number'),
-  ) as EncounterGameRow[];
-  return rows.map(toEncounterGame);
 }
 
 export async function listResultConfirmations(encounterId: UUID): Promise<ResultConfirmation[]> {
@@ -158,76 +149,96 @@ export async function submitGameScore(s: GameScoreSubmission): Promise<SubmitOut
   return classifySubmitError(error, typeof navigator === 'undefined' ? true : navigator.onLine);
 }
 
-/** Maps a raised RPC error (e.g. "lineup_changed") to a stable key for translations. */
-export function rpcErrorKey(e: unknown): string {
-  const message = (e instanceof DataError || e instanceof Error ? e.message : String(e)).trim();
-  if (/^[a-z][a-z_]*$/.test(message)) return message;
-  const match = message.match(/\b[a-z]+(?:_[a-z]+)+\b/);
-  return match ? match[0] : 'generic';
-}
-
 // Realtime ----------------------------------------------------------------------------------
 
-const REALTIME_TABLES = [
-  { table: 'encounters', column: 'id' },
-  { table: 'lineups', column: 'encounter_id' },
-  { table: 'doubles_selections', column: 'encounter_id' },
-  { table: 'encounter_games', column: 'encounter_id' },
-  { table: 'reconciled_set_states', column: 'encounter_id' },
-  { table: 'set_entries', column: 'encounter_id' },
-  { table: 'result_confirmations', column: 'encounter_id' },
-] as const;
-
+/** While a channel is down, refetch on this interval so screens never go stale silently. */
+const FALLBACK_POLL_MS = 15_000;
 let channelSeq = 0;
 
+interface Binding {
+  table: string;
+  filter: string;
+}
+
 /**
- * Watches a set of encounters (a division, a round, a dashboard) – any change to their
- * status, score, games, conflicts or confirmations triggers one debounced refetch.
+ * Opens one channel for the given table filters. Every change (and every (re)subscribe,
+ * since events may have been missed) triggers one debounced `onChange` – consumers refetch,
+ * the database stays the single source of truth. Channel health is reported for the UI.
  */
-export function subscribeToEncounterSet(encounterIds: readonly UUID[], onChange: () => void, debounceMs = 300): () => void {
-  if (encounterIds.length === 0) return () => undefined;
+function watch(label: string, bindings: readonly Binding[], onChange: () => void, debounceMs: number): () => void {
   const client = requireSupabase();
+  const name = `${label}:${++channelSeq}`; // unique: several screens may watch the same rows
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let poll: ReturnType<typeof setInterval> | undefined;
+  let closed = false;
   const fire = () => {
     clearTimeout(timer);
-    timer = setTimeout(onChange, debounceMs);
+    timer = setTimeout(() => !closed && onChange(), debounceMs);
   };
-  // Realtime "in" filters accept up to 100 values; a division has far fewer encounters.
-  const ids = `(${encounterIds.slice(0, 100).join(',')})`;
-  let channel = client.channel(`encounters:${++channelSeq}`);
-  channel = channel.on('postgres_changes', { event: '*', schema: 'public', table: 'encounters', filter: `id=in.${ids}` }, fire);
-  for (const table of ['encounter_games', 'reconciled_set_states', 'result_confirmations', 'lineups', 'doubles_selections']) {
-    channel = channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `encounter_id=in.${ids}` }, fire);
+
+  let channel = client.channel(name);
+  for (const { table, filter } of bindings) {
+    channel = channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, fire);
   }
-  channel.subscribe();
+  channel.subscribe((status) => {
+    if (closed) return;
+    if (status === 'SUBSCRIBED') {
+      clearInterval(poll);
+      poll = undefined;
+      reportChannel(name, true);
+      fire();
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      reportChannel(name, false);
+      poll ??= setInterval(fire, FALLBACK_POLL_MS);
+    }
+  });
+
   return () => {
+    closed = true;
     clearTimeout(timer);
+    clearInterval(poll);
+    reportChannel(name, null);
     void client.removeChannel(channel);
   };
 }
 
-/**
- * Calls `onChange` (debounced) whenever anything about the encounter changes. Consumers
- * refetch – the database stays the single source of truth. Returns the cleanup function.
- */
+const ENCOUNTER_CHILD_TABLES = [
+  'lineups',
+  'doubles_selections',
+  'encounter_games',
+  'reconciled_set_states',
+  'set_entries',
+  'result_confirmations',
+] as const;
+
+/** Everything about one encounter (scorecard, public match page, organizer view). */
 export function subscribeToEncounter(encounterId: UUID, onChange: () => void, debounceMs = 150): () => void {
-  const client = requireSupabase();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const fire = () => {
-    clearTimeout(timer);
-    timer = setTimeout(onChange, debounceMs);
-  };
-  // Unique name: several screens may watch the same encounter at once.
-  let channel = client.channel(`encounter:${encounterId}:${++channelSeq}`);
-  for (const { table, column } of REALTIME_TABLES) {
-    channel = channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `${column}=eq.${encounterId}` }, fire);
-  }
-  channel.subscribe((status) => {
-    // After a reconnect we may have missed events: refetch once.
-    if (status === 'SUBSCRIBED') fire();
-  });
-  return () => {
-    clearTimeout(timer);
-    void client.removeChannel(channel);
-  };
+  return watch(
+    `encounter:${encounterId}`,
+    [
+      { table: 'encounters', filter: `id=eq.${encounterId}` },
+      ...ENCOUNTER_CHILD_TABLES.map((table) => ({ table, filter: `encounter_id=eq.${encounterId}` })),
+    ],
+    onChange,
+    debounceMs,
+  );
+}
+
+/** A set of encounters (a division, a round, a dashboard): status, score, conflicts, confirmations. */
+export function subscribeToEncounterSet(encounterIds: readonly UUID[], onChange: () => void, debounceMs = 300): () => void {
+  if (encounterIds.length === 0) return () => undefined;
+  // Realtime "in" filters accept up to 100 values; a division has far fewer encounters.
+  const ids = `(${encounterIds.slice(0, 100).join(',')})`;
+  return watch(
+    'encounters',
+    [
+      { table: 'encounters', filter: `id=in.${ids}` },
+      ...['encounter_games', 'reconciled_set_states', 'result_confirmations', 'lineups', 'doubles_selections'].map((table) => ({
+        table,
+        filter: `encounter_id=in.${ids}`,
+      })),
+    ],
+    onChange,
+    debounceMs,
+  );
 }

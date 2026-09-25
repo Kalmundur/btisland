@@ -158,7 +158,7 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
     expect((await encounter(c)).status).toBe('lineups');
     expect((await games(c)).slice(0, 6).every((g) => g.status === 'available')).toBe(true);
     // Organizer sees everything, including superseded confirmations (home v1 + v2 ×2, away ×2).
-    expect(await c.t.as(c.org, () => c.t.query('select * from public.lineup_confirmations'))).toHaveLength(5);
+    expect(await c.t.as(c.org, () => c.t.query('select id, player_id from public.lineup_confirmations'))).toHaveLength(5);
   });
 
   it('game entry rules: phase gating, valid scores, no games after 3 wins, no gaps', async () => {
@@ -200,8 +200,8 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
       c.t.query('select status, home_points, away_points from public.reconciled_set_states where encounter_id = $1', [c.enc]),
     );
     expect(publicView).toEqual([{ status: 'conflict', home_points: null, away_points: null }]);
-    expect(await c.t.as(null, () => c.t.query('select * from public.set_entries'))).toHaveLength(0);
-    expect(await c.a1.select('select * from public.set_entries')).toHaveLength(3); // participants may inspect
+    expect(await c.t.as(null, () => c.t.query('select id from public.set_entries'))).toHaveLength(0);
+    expect(await c.a1.select('select id, submitted_by_player_id from public.set_entries')).toHaveLength(3); // participants may inspect
     expect((await games(c))[1].status).toBe('conflict');
 
     // Ellert corrects his own entry -> all agree -> published immediately.

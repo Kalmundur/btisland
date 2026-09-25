@@ -1,6 +1,9 @@
 /** Central app configuration. Rename the app here only. */
 export const APP_NAME = 'Borðtennis Live';
-export const APP_VERSION = '0.1.0';
+export const APP_SHORT_NAME = 'Borðtennis';
+export const APP_VERSION = '0.4.0';
+/** Browser/PWA chrome colour (matches the light surface). */
+export const THEME_COLOR = '#ffffff';
 
 export const SUPPORTED_LANGUAGES = ['is', 'en'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];

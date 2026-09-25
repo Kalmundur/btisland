@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LogOut } from 'lucide-react';
 import { Section } from '../../components/List';
 import { EncounterHeader } from '../../components/Encounter';
 import { MatchList } from '../../components/MatchList';
 import { RejectedEntries } from '../../components/SyncIndicator';
+import { useOutbox } from '../../offline/scoreSync';
 import { Button } from '../../components/Button';
 import { AsyncBoundary, EmptyState } from '../../components/StateViews';
 import { useDerivedEncounter, useEncounterData, type EncounterData } from '../../hooks/useEncounterData';
@@ -37,6 +38,11 @@ export function ActiveEncounter({
   onLeft: () => void;
 }) {
   const data = useEncounterData(session.encounterId, { withEntries: true });
+  const { syncedCount } = useOutbox();
+  const { reload } = data;
+  useEffect(() => {
+    if (syncedCount > 0) reload();
+  }, [syncedCount, reload]);
   const league = useLeague();
   const seasonId = league.data?.season.id ?? null;
   const roster = useAsync(

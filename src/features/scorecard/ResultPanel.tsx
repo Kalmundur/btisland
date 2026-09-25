@@ -4,7 +4,8 @@ import { BadgeCheck, CheckCircle2, Circle } from 'lucide-react';
 import { Button } from '../../components/Button';
 import type { EncounterState } from '../../domain/encounterState';
 import { resultConfirmationState } from '../../domain/confirmation';
-import { confirmResult, rpcErrorKey } from '../../data/encounterRepository';
+import { confirmResult } from '../../data/encounterRepository';
+import { useErrorText } from '../../hooks/useErrorText';
 import type { EncounterDetail, ResultConfirmation, TeamSide } from '../../domain/types';
 
 /** "Jafntefli 5–5" / "KR-B vann 6–3". */
@@ -37,6 +38,7 @@ export function ResultPanel({
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
+  const errorText = useErrorText('result.errors');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const status = resultConfirmationState(confirmations, encounter.resultHash);
@@ -62,7 +64,7 @@ export function ResultPanel({
       await confirmResult(encounter.id, encounter.resultHash);
       onChanged();
     } catch (e) {
-      setError(rpcErrorKey(e));
+      setError(errorText(e));
       onChanged();
     } finally {
       setBusy(false);
@@ -96,7 +98,7 @@ export function ResultPanel({
       </ul>
       {error && (
         <p className="form-error" role="alert">
-          {t(`result.errors.${error}`, { defaultValue: t('result.errors.generic') })}
+          {error}
         </p>
       )}
       {!mine && !state.hasOpenConflict && (

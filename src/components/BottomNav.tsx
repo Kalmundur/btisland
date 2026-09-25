@@ -56,7 +56,9 @@ export function BottomNav() {
                     className={`bottom-nav__badge bottom-nav__badge--${badge}`}
                     role="status"
                     aria-label={badge === 'conflict' ? t('nav.badgeConflict') : t('nav.badgeActive')}
-                  />
+                  >
+                    {badge === 'conflict' ? '!' : null}
+                  </span>
                 )}
               </span>
               <span className="bottom-nav__label">{t(labelKey)}</span>

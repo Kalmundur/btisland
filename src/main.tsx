@@ -7,6 +7,9 @@ import './styles/components.css';
 import './styles/scoring.css';
 import './styles/league.css';
 import { App } from './App';
+import { startServiceWorker } from './lib/pwa';
+
+startServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

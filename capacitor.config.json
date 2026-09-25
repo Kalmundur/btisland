@@ -1,0 +1,8 @@
+{
+  "appId": "is.bordtennis.live",
+  "appName": "Borðtennis Live",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

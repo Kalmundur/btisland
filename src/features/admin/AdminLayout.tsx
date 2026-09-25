@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Navigate, NavLink, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, LogOut, Menu, Smartphone, X } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
@@ -8,6 +8,8 @@ import { isCurrentUserOrganizer, signOut } from '../../data/authRepository';
 import { LoadingState, NotConfigured, ErrorState } from '../../components/StateViews';
 import { Button } from '../../components/Button';
 import { APP_NAME } from '../../config/app';
+import { useDialog } from '../../hooks/useDialog';
+import { ConnectivityBanner } from '../../components/ConnectivityBanner';
 import { RESOURCES } from './resources';
 
 /** Organizer portal shell: desktop sidebar, mobile drawer. Access is enforced again by RLS. */
@@ -19,6 +21,10 @@ export function AdminLayout() {
     [userId, isAnonymous],
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerRef = useDialog<HTMLDivElement>(drawerOpen, () => setDrawerOpen(false));
+  // Remember that an organizer was signed in, so losing the session reads as "expired".
+  const hadSession = useRef(false);
+  if (session && !isAnonymous) hadSession.current = true;
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -26,11 +32,12 @@ export function AdminLayout() {
 
   if (!configured) return <div className="admin-gate"><NotConfigured /></div>;
   if (!ready) return <LoadingState />;
-  if (!session || isAnonymous) return <Navigate to="/admin/login" replace />;
+  if (!session || isAnonymous) return <Navigate to="/admin/login" replace state={{ expired: hadSession.current }} />;
   if (organizer.error) return <div className="admin-gate"><ErrorState error={organizer.error} onRetry={organizer.reload} /></div>;
   if (organizer.data === undefined || organizer.loading) return <LoadingState />;
 
   const logout = async () => {
+    hadSession.current = false; // deliberate sign-out is not an expired session
     await signOut();
     navigate('/admin/login', { replace: true });
   };
@@ -84,7 +91,7 @@ export function AdminLayout() {
       </aside>
 
       {drawerOpen && (
-        <div className="admin-drawer" role="dialog" aria-modal="true" aria-label={t('common.menu')}>
+        <div className="admin-drawer" role="dialog" aria-modal="true" aria-label={t('common.menu')} ref={drawerRef}>
           <div className="admin-drawer__backdrop" onClick={() => setDrawerOpen(false)} />
           <div className="admin-drawer__panel">
             <div className="admin-brand admin-brand--drawer">
@@ -102,6 +109,8 @@ export function AdminLayout() {
       )}
 
       <main className="admin-main">
+        <ScrollRestoration />
+        <ConnectivityBanner />
         <Outlet />
       </main>
     </div>
