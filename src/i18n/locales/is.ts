@@ -293,7 +293,6 @@ export const is = {
     with: 'með {{name}}',
     doublesNote: 'Tvíliðaleikir hafa ekki áhrif á TOPP 5.',
     team: 'Lið',
-    club: 'Félag',
   },
   admin: {
     title: 'Stjórnborð',

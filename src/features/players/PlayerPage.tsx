@@ -37,7 +37,7 @@ export function PlayerPage() {
           <>
             <PageHeader
               title={d.player.fullName}
-              subtitle={[d.player.teamName, d.player.clubName].filter(Boolean).join(' · ')}
+              subtitle={d.player.teamName || d.player.clubName}
               back
               backTo="/standings"
               actions={<ShareButton title={d.player.fullName} />}
@@ -47,7 +47,6 @@ export function PlayerPage() {
                 {d.player.teamId && (
                   <ListRow to={`/team/${d.player.teamId}`} title={d.player.teamName} subtitle={t('player.team')} chevron />
                 )}
-                <ListRow title={d.player.clubName} subtitle={t('player.club')} />
               </List>
 
               <Section title={t('player.singles')}>

@@ -294,7 +294,6 @@ export const en: Translation = {
     with: 'with {{name}}',
     doublesNote: 'Doubles do not affect the TOP 5.',
     team: 'Team',
-    club: 'Club',
   },
   admin: {
     title: 'Organizer',
