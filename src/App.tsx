@@ -13,12 +13,26 @@ import { LivePage, MatchPage, RoundPage } from './features/live/LivePages';
 import { TeamPage } from './features/team/TeamPage';
 import { PlayerPage } from './features/players/PlayerPage';
 import { NotFoundPage } from './features/NotFoundPage';
+import { RouteError } from './components/RouteError';
+import { claimAutoReload, isChunkLoadError } from './lib/chunkReload';
+import { reloadToLatest } from './lib/pwa';
 
-const AdminApp = lazy(() => import('./features/admin/AdminApp'));
+// A tab opened before a deploy may ask for a chunk hash that no longer exists: reload once
+// onto the new build instead of failing (RouteError explains it if that does not help).
+const AdminApp = lazy(() =>
+  import('./features/admin/AdminApp').catch((error: unknown) => {
+    if (isChunkLoadError(error) && claimAutoReload()) {
+      reloadToLatest();
+      return new Promise<never>(() => {});
+    }
+    throw error;
+  }),
+);
 
 const router = createBrowserRouter([
   {
     element: <PlayerLayout />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Navigate to="/scorecard" replace /> },
       // The four permanent tabs
@@ -40,6 +54,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/admin/*',
+    errorElement: <RouteError />,
     element: (
       <Suspense fallback={<LoadingState />}>
         <AdminApp />

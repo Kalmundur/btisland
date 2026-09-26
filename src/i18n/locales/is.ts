@@ -198,9 +198,11 @@ export const is = {
     reviewHint: 'Farðu yfir og staðfestu ef rétt.',
     waitingOpponent: 'Bíður eftir mótherjum',
     lineupHidden: 'Uppstilling mótherja birtist þegar bæði lið hafa staðfest.',
-    lineupEditable: 'Þú getur breytt uppstillingunni þar til mótherjar hafa staðfest sína.',
+    lineupReady: 'Uppstilling tilbúin',
+    waitingLineup: '{{team}} hefur ekki staðfest uppstillingu enn.',
     doublesHidden: 'Tvíliðapar mótherja birtist þegar bæði lið hafa staðfest.',
-    doublesEditable: 'Þú getur breytt tvíliðaparinu þar til mótherjar hafa staðfest sitt.',
+    doublesReady: 'Tvíliðapar tilbúið',
+    waitingDoubles: '{{team}} hefur ekki valið tvíliðapar enn.',
     doublesIntro: 'Leikjum 1–6 er lokið. Veljið tvo leikmenn í tvíliðaleikinn.',
     version: 'Útgáfa {{version}}',
     errors: {
@@ -468,6 +470,9 @@ export const is = {
     notFound: 'Síða fannst ekki.',
     forbidden: 'Aðgangur ekki leyfður.',
     goHome: 'Fara á forsíðu',
+    newVersionTitle: 'Ný útgáfa er komin',
+    newVersionBody: 'Endurhlaðið síðuna til að halda áfram.',
+    reload: 'Endurhlaða',
   },
 } as const;
 

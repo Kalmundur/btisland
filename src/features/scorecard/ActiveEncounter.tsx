@@ -16,7 +16,7 @@ import { listTeamPlayers } from '../../data/leagueRepository';
 import { confirmDoubles, confirmLineup, proposeDoubles, proposeLineup } from '../../data/encounterRepository';
 import { slotsForSide, validateDoubles, validateLineup } from '../../domain/lineup';
 import type { LineupSlotLetter, PlayerListItem, RoundSession, TeamSide } from '../../domain/types';
-import { OpponentSelectionStatus, SelectionPanel } from './SelectionPanel';
+import { OpponentSelectionStatus, OpponentWaiting, SelectionPanel } from './SelectionPanel';
 import { DOUBLES_CONFIRMATIONS } from '../../domain/confirmation';
 import { ScoreEntry } from './ScoreEntry';
 import { ResultPanel, useOutcomeText } from './ResultPanel';
@@ -134,7 +134,7 @@ function EncounterFlow({
         myPlayerId={session.playerId}
         names={names}
         lockedLabel={t('selection.lineupLocked')}
-        lockedEditNote={t('selection.lineupEditable')}
+        readyLabel={t('selection.lineupReady')}
         validate={(draft) => validateLineup(mySide, draft as Partial<Record<LineupSlotLetter, string>>)}
         onPropose={async (draft) => {
           await proposeLineup(encounter.id, draft as Partial<Record<LineupSlotLetter, string>>);
@@ -145,13 +145,17 @@ function EncounterFlow({
           reload();
         }}
       />
-      <OpponentSelectionStatus
-        label={t('selection.opponent', { team: otherTeam })}
-        selection={otherLineup}
-        missingLabel={t('selection.lineupMissing')}
-        lockedLabel={t('selection.lineupLocked')}
-        hiddenNote={myLineup?.lockedAt ? t('selection.waitingOpponent') : t('selection.lineupHidden')}
-      />
+      {myLineup?.lockedAt && !otherLineup?.lockedAt ? (
+        <OpponentWaiting detail={t('selection.waitingLineup', { team: otherTeam })} />
+      ) : (
+        <OpponentSelectionStatus
+          label={t('selection.opponent', { team: otherTeam })}
+          selection={otherLineup}
+          missingLabel={t('selection.lineupMissing')}
+          lockedLabel={t('selection.lineupLocked')}
+          hiddenNote={t('selection.lineupHidden')}
+        />
+      )}
     </>
   );
 
@@ -167,7 +171,7 @@ function EncounterFlow({
         myPlayerId={session.playerId}
         names={names}
         lockedLabel={t('selection.doublesLocked')}
-        lockedEditNote={t('selection.doublesEditable')}
+        readyLabel={t('selection.doublesReady')}
         requiredConfirmations={DOUBLES_CONFIRMATIONS}
         validate={(draft) => validateDoubles([draft['1'], draft['2']], rosterIds)}
         onPropose={async (draft) => {
@@ -179,14 +183,18 @@ function EncounterFlow({
           reload();
         }}
       />
-      <OpponentSelectionStatus
-        label={t('selection.opponent', { team: otherTeam })}
-        selection={otherDoubles}
-        missingLabel={t('selection.doublesMissing')}
-        lockedLabel={t('selection.doublesLocked')}
-        hiddenNote={t('selection.doublesHidden')}
-        requiredConfirmations={DOUBLES_CONFIRMATIONS}
-      />
+      {myDoubles?.lockedAt && !otherDoubles?.lockedAt ? (
+        <OpponentWaiting detail={t('selection.waitingDoubles', { team: otherTeam })} />
+      ) : (
+        <OpponentSelectionStatus
+          label={t('selection.opponent', { team: otherTeam })}
+          selection={otherDoubles}
+          missingLabel={t('selection.doublesMissing')}
+          lockedLabel={t('selection.doublesLocked')}
+          hiddenNote={t('selection.doublesHidden')}
+          requiredConfirmations={DOUBLES_CONFIRMATIONS}
+        />
+      )}
     </Section>
   );
 
@@ -226,7 +234,7 @@ function EncounterFlow({
         </>
       )}
 
-      <div className="page-actions">
+      <div className="page-actions page-actions--utility">
         <Button variant="ghost" size="sm" icon={<LogOut size={16} aria-hidden />} onClick={() => void leave()} disabled={leaving}>
           {t('scorecard.leave')}
         </Button>

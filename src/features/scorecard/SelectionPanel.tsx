@@ -10,7 +10,8 @@ import type { PlayerListItem, TeamSelection } from '../../domain/types';
  * Own-team selection – used for the singles lineup (A/B/C or X/Y/Z) and the doubles pair (1/2).
  * Both lock on submit (one confirmation). Proposing/editing = confirmation #1 of a new version;
  * if more were required, a different teammate would confirm the exact version to lock it.
- * `lockedEditNote` keeps a locked selection editable (until the opponent's is in too).
+ * `readyLabel` keeps a locked selection editable (until the opponent's is in too) and is
+ * the quiet status shown under it.
  */
 export function SelectionPanel({
   title,
@@ -25,7 +26,7 @@ export function SelectionPanel({
   onPropose,
   onConfirm,
   requiredConfirmations = LINEUP_CONFIRMATIONS,
-  lockedEditNote,
+  readyLabel,
 }: {
   title: string;
   slots: readonly string[];
@@ -40,8 +41,8 @@ export function SelectionPanel({
   onPropose: (draft: Record<string, string>) => Promise<void>;
   onConfirm: (version: number) => Promise<void>;
   requiredConfirmations?: number;
-  /** When set, a locked selection can still be changed; this note explains until when. */
-  lockedEditNote?: string;
+  /** When set, a locked selection can still be changed and shows this as its status. */
+  readyLabel?: string;
 }) {
   const { t } = useTranslation();
   const errorText = useErrorText('selection.errors');
@@ -86,7 +87,7 @@ export function SelectionPanel({
     <section className="selection">
       <div className="selection__head">
         <h2 className="selection__title">{title}</h2>
-        {selection && !showEditor && (
+        {selection && !showEditor && !(progress.stage === 'locked' && readyLabel) && (
           <span className={`selection__badge${progress.stage === 'locked' ? ' selection__badge--locked' : ''}`}>
             {progress.stage === 'locked' ? (
               <>
@@ -177,19 +178,34 @@ export function SelectionPanel({
               {selection && <p className="selection__version">{t('selection.version', { version: selection.version })}</p>}
             </>
           )}
-          {progress.stage === 'locked' && lockedEditNote && (
-            <>
-              <p className="note">{lockedEditNote}</p>
-              <div className="button-stack">
-                <Button variant="secondary" block onClick={startEdit} disabled={busy}>
-                  {t('selection.edit')}
-                </Button>
-              </div>
-            </>
+          {progress.stage === 'locked' && readyLabel && (
+            <div className="selection__ready">
+              <span className="selection__status">
+                <CheckCircle2 size={16} aria-hidden /> {readyLabel}
+              </span>
+              <Button variant="secondary" size="sm" className="selection__edit" onClick={startEdit} disabled={busy}>
+                {t('selection.edit')}
+              </Button>
+            </div>
           )}
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * The main state once our selection is in and the opponent's is not: one clear message.
+ * It resolves by itself – the reveal arrives through the encounter's realtime subscription.
+ */
+export function OpponentWaiting({ detail }: { detail: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className="waiting" role="status">
+      <span className="waiting__pulse" aria-hidden />
+      <p className="waiting__title">{t('selection.waitingOpponent')}</p>
+      <p className="waiting__detail">{detail}</p>
+    </div>
   );
 }
 

@@ -199,9 +199,11 @@ export const en: Translation = {
     reviewHint: 'Review and confirm if correct.',
     waitingOpponent: 'Waiting for the opponent',
     lineupHidden: 'The opponent lineup is shown once both teams have confirmed.',
-    lineupEditable: 'You can change the lineup until the opponent has confirmed theirs.',
+    lineupReady: 'Lineup ready',
+    waitingLineup: '{{team}} has not confirmed their lineup yet.',
     doublesHidden: 'The opponent pair is shown once both teams have confirmed.',
-    doublesEditable: 'You can change the doubles pair until the opponent has confirmed theirs.',
+    doublesReady: 'Doubles pair ready',
+    waitingDoubles: '{{team}} has not chosen their doubles pair yet.',
     doublesIntro: 'Matches 1–6 are done. Choose two players for the doubles.',
     version: 'Version {{version}}',
     errors: {
@@ -469,5 +471,8 @@ export const en: Translation = {
     notFound: 'Page not found.',
     forbidden: 'Access denied.',
     goHome: 'Go to start',
+    newVersionTitle: 'A new version is available',
+    newVersionBody: 'Reload the page to continue.',
+    reload: 'Reload',
   },
 };

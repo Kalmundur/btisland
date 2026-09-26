@@ -110,19 +110,18 @@ export function EncounterHeader({
         {' · '}
         <span className={`match-head__status match-head__status--${e.status}`}>{t(`status.${e.status}`)}</span>
       </p>
-      <div className="match-head__teams">
+      <div className={`match-head__teams match-head__teams--${shown ? 'score' : 'vs'}`}>
         {side(e.homeTeamName, e.homeTeamId)}
-        <span className="match-head__score num">
-          {shown ? (
-            <>
-              {shown.home}
-              <span className="match-head__dash">–</span>
-              {shown.away}
-            </>
-          ) : (
-            <span className="match-head__vs">{t('common.vs')}</span>
-          )}
-        </span>
+        {shown ? (
+          <span className="match-head__score num">
+            {shown.home}
+            <span className="match-head__dash">–</span>
+            {shown.away}
+          </span>
+        ) : (
+          // Own column (not inside the score's display-size line box) so it centres on the names.
+          <span className="match-head__vs">{t('common.vs')}</span>
+        )}
         {side(e.awayTeamName, e.awayTeamId)}
       </div>
       {note && <p className="match-head__note">{note}</p>}
