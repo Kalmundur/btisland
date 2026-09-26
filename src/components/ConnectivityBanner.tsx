@@ -1,17 +1,17 @@
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, WifiOff } from 'lucide-react';
-import { useOnline, useRealtimeHealthy } from '../lib/connectivity';
+import { WifiOff } from 'lucide-react';
+import { useOnline } from '../lib/connectivity';
 import { applyUpdate, updateAvailable } from '../lib/pwa';
 import { useStore } from '../lib/store';
 
 /**
- * Slim, only-when-relevant banner: offline (with what still works), delayed live updates,
- * and "new version ready". Hidden while everything is normal.
+ * Slim, only-when-relevant banner: offline (with what still works) and "new version ready".
+ * Hidden while everything is normal. Delayed live updates are not shown: screens reconnect
+ * and fall back to polling on their own.
  */
 export function ConnectivityBanner() {
   const { t } = useTranslation();
   const isOnline = useOnline();
-  const realtimeOk = useRealtimeHealthy();
   const hasUpdate = useStore(updateAvailable);
 
   return (
@@ -22,12 +22,6 @@ export function ConnectivityBanner() {
           <span>
             <strong>{t('connection.offline')}.</strong> {t('connection.offlineHint')}
           </span>
-        </div>
-      )}
-      {isOnline && !realtimeOk && (
-        <div className="banner banner--muted" role="status">
-          <RefreshCw size={16} aria-hidden />
-          <span>{t('connection.realtime')}</span>
         </div>
       )}
       {hasUpdate && (
