@@ -153,6 +153,9 @@ export async function submitGameScore(s: GameScoreSubmission): Promise<SubmitOut
 
 /** While a channel is down, refetch on this interval so screens never go stale silently. */
 const FALLBACK_POLL_MS = 15_000;
+/** A dropped channel is reopened after this delay, doubling up to the max while it keeps failing. */
+export const RETRY_MIN_MS = 2_000;
+export const RETRY_MAX_MS = 30_000;
 let channelSeq = 0;
 
 interface Binding {
@@ -160,45 +163,87 @@ interface Binding {
   filter: string;
 }
 
+type RealtimeChannel = ReturnType<ReturnType<typeof requireSupabase>['channel']>;
+
 /**
  * Opens one channel for the given table filters. Every change (and every (re)subscribe,
  * since events may have been missed) triggers one debounced `onChange` – consumers refetch,
  * the database stays the single source of truth. Channel health is reported for the UI.
+ *
+ * A channel that errors, times out or is closed by the server (sleeping phone, network
+ * switch, expired token) is replaced by a fresh one with backoff – immediately when the
+ * device comes back online or the page becomes visible. Polling covers the gap.
  */
 function watch(label: string, bindings: readonly Binding[], onChange: () => void, debounceMs: number): () => void {
   const client = requireSupabase();
-  const name = `${label}:${++channelSeq}`; // unique: several screens may watch the same rows
+  const name = `${label}:${++channelSeq}`; // health key; unique: several screens may watch the same rows
   let timer: ReturnType<typeof setTimeout> | undefined;
   let poll: ReturnType<typeof setInterval> | undefined;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  let retryDelay = RETRY_MIN_MS;
+  let channel: RealtimeChannel | null = null;
   let closed = false;
   const fire = () => {
     clearTimeout(timer);
     timer = setTimeout(() => !closed && onChange(), debounceMs);
   };
 
-  let channel = client.channel(name);
-  for (const { table, filter } of bindings) {
-    channel = channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, fire);
-  }
-  channel.subscribe((status) => {
-    if (closed) return;
-    if (status === 'SUBSCRIBED') {
-      clearInterval(poll);
-      poll = undefined;
-      reportChannel(name, true);
-      fire();
-    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-      reportChannel(name, false);
-      poll ??= setInterval(fire, FALLBACK_POLL_MS);
+  const open = () => {
+    // Fresh topic per attempt: the previous channel may still be leaving the client.
+    let ch = client.channel(`${label}:${++channelSeq}`);
+    for (const { table, filter } of bindings) {
+      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table, filter }, fire);
     }
-  });
+    channel = ch;
+    ch.subscribe((status) => {
+      if (closed || ch !== channel) return; // ignore replaced channels
+      if (status === 'SUBSCRIBED') {
+        retryDelay = RETRY_MIN_MS;
+        clearInterval(poll);
+        poll = undefined;
+        reportChannel(name, true);
+        fire();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        reportChannel(name, false);
+        poll ??= setInterval(fire, FALLBACK_POLL_MS);
+        if (!retry) {
+          retry = setTimeout(reopen, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
+        }
+      }
+    });
+  };
+
+  const reopen = () => {
+    clearTimeout(retry);
+    retry = undefined;
+    if (closed) return;
+    const old = channel;
+    channel = null;
+    if (old) void client.removeChannel(old);
+    open();
+  };
+
+  // Back online / back in the foreground while degraded: retry now instead of waiting.
+  const wake = () => {
+    if (closed || poll === undefined || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    retryDelay = RETRY_MIN_MS;
+    reopen();
+  };
+  if (typeof window !== 'undefined') window.addEventListener('online', wake);
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', wake);
+
+  open();
 
   return () => {
     closed = true;
     clearTimeout(timer);
+    clearTimeout(retry);
     clearInterval(poll);
+    if (typeof window !== 'undefined') window.removeEventListener('online', wake);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', wake);
     reportChannel(name, null);
-    void client.removeChannel(channel);
+    if (channel) void client.removeChannel(channel);
   };
 }
 
