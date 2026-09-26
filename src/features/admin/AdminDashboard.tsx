@@ -46,7 +46,7 @@ function currentRound(data: LeagueData): Round | null {
 
 function Attention({ data }: { data: LeagueData }) {
   const { t } = useTranslation();
-  const conflicts = useAsync(() => listConflictCounts(data.encounters.map((e) => e.id)), [data]);
+  const conflicts = useAsync(() => listConflictCounts(data.encounters.map((e) => e.id)), [], [data]);
   const counts = conflicts.data ?? {};
   const inProgress = data.encounters.filter((e) => e.status === 'lineups' || e.status === 'in_progress').length;
   const awaiting = data.encounters.filter((e) => e.status === 'awaiting_confirmation').length;

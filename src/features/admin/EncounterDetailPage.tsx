@@ -40,7 +40,8 @@ export function EncounterDetailPage() {
       const [audit, corrections] = await Promise.all([listEncounterAudit(encounterId), listGameCorrections(encounterId)]);
       return { audit, corrections };
     },
-    [encounterId, data.data],
+    [encounterId],
+    [data.data], // refresh with the encounter's realtime reloads
   );
 
   return (

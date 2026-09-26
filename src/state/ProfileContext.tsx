@@ -6,7 +6,7 @@ import { leaveAllRounds } from '../data/roundRepository';
 import { getPlayer } from '../data/leagueRepository';
 import { useAsync } from '../hooks/useAsync';
 import { scoreOutbox } from '../offline/scoreSync';
-import { scorecardRoute } from '../features/scorecard/scorecardMemory';
+import { scoreDrafts, scorecardRoute } from '../features/scorecard/scorecardMemory';
 import type { PlayerListItem, UUID } from '../domain/types';
 
 interface ProfileState {
@@ -81,6 +81,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     localProfile.clear();
     scorecardRoute.set('/scorecard');
+    scoreDrafts.clearAll();
+    scoreOutbox.dismissAllRejections();
     setPlayerId(null);
   }, [userId]);
 

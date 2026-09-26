@@ -20,7 +20,7 @@ export function TopPlayers({ data }: { data: LeagueData }) {
   // Game points for the point differential, reloaded only when an official result changes.
   const official = data.encounters.filter((e) => data.officialIds.has(e.id));
   const scoresKey = official.map((e) => `${e.id}:${e.resultHash}`).sort().join(',');
-  const scores = useAsync(() => listGameScores(official.map((e) => e.id)), [scoresKey]);
+  const scores = useAsync(() => listGameScores(official.map((e) => e.id)), [], [scoresKey]);
   const byId = useMemo(() => new Map((players.data ?? []).map((p) => [p.id, p])), [players.data]);
   const top = useMemo(
     () =>

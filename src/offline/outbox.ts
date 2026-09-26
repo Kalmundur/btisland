@@ -92,6 +92,11 @@ export class Outbox {
     await this.flush();
   }
 
+  /** On logout: refused entries belong to the previous player's session. */
+  dismissAllRejections() {
+    this.set({ rejections: [] });
+  }
+
   dismissRejection(clientEntryId: UUID) {
     this.set({ rejections: this.snapshot.rejections.filter((r) => r.entry.clientEntryId !== clientEntryId) });
   }

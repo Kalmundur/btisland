@@ -3,6 +3,7 @@ import { Outlet, ScrollRestoration } from 'react-router';
 import { BottomNav } from './BottomNav';
 import { ConnectivityBanner } from './ConnectivityBanner';
 import { useAuth } from '../state/AuthContext';
+import { useProfile } from '../state/ProfileContext';
 
 /**
  * True while the on-screen keyboard takes a large part of the viewport. On Android the
@@ -32,6 +33,7 @@ function useKeyboardOpen(): boolean {
 /** Shell for the public/player app: content + fixed four-tab bottom navigation. */
 export function PlayerLayout() {
   const { configured, ready, session, ensurePlayerSession } = useAuth();
+  const { playerId } = useProfile();
   const keyboardOpen = useKeyboardOpen();
 
   // Ordinary players never see a login: create an anonymous auth user silently.
@@ -44,7 +46,9 @@ export function PlayerLayout() {
       <ScrollRestoration />
       <main className="app-main">
         <ConnectivityBanner />
-        <Outlet />
+        {/* Keyed by player: switching player starts every page fresh, so no page state
+            (loaded data, open panels, half-done forms) carries over from the previous player. */}
+        <Outlet key={playerId ?? 'no-player'} />
       </main>
       <BottomNav />
     </div>

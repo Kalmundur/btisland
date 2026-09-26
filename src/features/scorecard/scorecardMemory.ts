@@ -28,4 +28,6 @@ export const scoreDrafts = {
   get: (key: string) => drafts.get(key),
   set: (key: string, draft: ScoreDraft) => drafts.set(key, draft),
   clear: (key: string) => drafts.delete(key),
+  /** On logout: the next player must not find the previous player's half-entered games. */
+  clearAll: () => drafts.clear(),
 };

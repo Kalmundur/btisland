@@ -19,7 +19,8 @@ export function useScorecardBadge(refreshKey: string): ScorecardBadge {
 
   const session = useAsync(
     async () => (configured && userId && playerId ? pickActiveSession(await listMySessions(userId), todayInIceland()) : null),
-    [configured, userId, playerId, refreshKey],
+    [configured, userId, playerId],
+    [refreshKey],
   );
   const encounterId = session.data?.encounterId ?? null;
 
