@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, type Ref } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { Link, useNavigationType, useParams } from 'react-router';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { Section } from '../../components/List';
@@ -14,7 +15,7 @@ import { getDivision, getRound, listRoundEncounters } from '../../data/leagueRep
 import { subscribeToEncounterSet } from '../../data/encounterRepository';
 import { deriveRoundStatus, focusRound } from '../../domain/rounds';
 import { todayInIceland } from '../../domain/activeSession';
-import { formatDate, formatTime } from '../../lib/format';
+import { formatDate, formatShortDate, formatTime } from '../../lib/format';
 import type { EncounterDetail, Round } from '../../domain/types';
 import { OpponentSelectionStatus } from '../scorecard/SelectionPanel';
 import { useOutcomeText } from '../scorecard/ResultPanel';
@@ -34,46 +35,84 @@ export function LivePage() {
         actions={<ShareButton title={t('live.title')} />}
       />
       <div className="page">
-        <AsyncBoundary state={data}>{(d) => (d ? <RoundTimeline data={d} /> : <EmptyState>{t('standings.noSeason')}</EmptyState>)}</AsyncBoundary>
+        <AsyncBoundary state={data}>
+          {(d) => (d ? <RoundTimeline key={d.league.division.id} data={d} /> : <EmptyState>{t('standings.noSeason')}</EmptyState>)}
+        </AsyncBoundary>
       </div>
     </>
   );
 }
 
-/** Scroll position of the timeline per division, so coming back from a match restores it. */
+/**
+ * Accordion state that must outlive the page (opening a match and coming back unmounts it):
+ * the open round (null = all collapsed) and scroll position per division. Only back
+ * navigation reads them.
+ */
+const openRoundByDivision = new Map<string, string | null>();
 const timelineScroll = new Map<string, number>();
 
 function pageHeaderHeight(): number {
   return Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-header-h')) || 0;
 }
 
+/**
+ * Every round once, in numeric order, as an accordion with at most one round open (zero is
+ * allowed). The default open round (in progress → next upcoming → latest finished) is chosen
+ * once per division on arrival; afterwards only the user changes it – realtime updates never
+ * move the view or the selection.
+ */
 function RoundTimeline({ data }: { data: LeagueData }) {
   const navigationType = useNavigationType();
   const divisionId = data.league.division.id;
   const rounds = [...data.rounds].sort((a, b) => a.number - b.number);
   const inRound = (r: Round) => data.encounters.filter((e) => e.roundId === r.id);
-  const roundRefs = useRef(new Map<string, HTMLElement>());
-  // Which division the view has been positioned for – realtime updates re-render this
-  // component with fresh data but never move the view again.
-  const positionedFor = useRef<string | null>(null);
+  const headerRefs = useRef(new Map<string, HTMLElement>());
+  const isBack = navigationType === 'POP';
 
-  // Before the first paint (no visible jump): back navigation restores the saved position,
-  // any other arrival opens at the most relevant round.
+  // Initial selection only (state initialiser runs once per mount; the parent keys by division).
+  const [openId, setOpenId] = useState<string | null>(() => {
+    if (isBack && openRoundByDivision.has(divisionId)) {
+      const saved = openRoundByDivision.get(divisionId) ?? null;
+      if (saved === null || data.rounds.some((r) => r.id === saved)) return saved;
+    }
+    return focusRound(data.rounds, data.encounters, todayInIceland())?.id ?? null;
+  });
+  useEffect(() => {
+    openRoundByDivision.set(divisionId, openId);
+  }, [divisionId, openId]);
+
+  // Arrival (before first paint): back navigation restores the scroll position, any other
+  // arrival brings the open round's header to the top.
   useLayoutEffect(() => {
-    if (positionedFor.current === divisionId) return;
-    positionedFor.current = divisionId;
     const saved = timelineScroll.get(divisionId);
-    if (navigationType === 'POP' && saved !== undefined) {
+    if (isBack && saved !== undefined) {
       window.scrollTo(0, saved);
       return;
     }
-    const focus = focusRound(data.rounds, data.encounters, todayInIceland());
-    const el = focus ? roundRefs.current.get(focus.id) : undefined;
+    const el = openId ? headerRefs.current.get(openId) : undefined;
     if (!el) return;
     const top = el.getBoundingClientRect().top + window.scrollY - pageHeaderHeight();
     window.scrollTo(0, Math.max(0, top));
-    // data and navigationType are deliberately read once per division, not on every update.
-  }, [divisionId]);
+    // Deliberately runs once per mount (= per division), never on data updates.
+  }, []);
+
+  // Switching rounds: the round above may collapse, so keep the tapped header where it was.
+  const anchor = useRef<{ id: string; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    anchor.current = null;
+    const el = a ? headerRefs.current.get(a.id) : undefined;
+    if (!a || !el) return;
+    const shift = el.getBoundingClientRect().top - a.top;
+    if (shift !== 0) window.scrollBy(0, shift);
+  }, [openId]);
+
+  // Tapping the open round collapses it (all rounds closed); any other round replaces it.
+  const toggle = (id: string) => {
+    const el = headerRefs.current.get(id);
+    anchor.current = el ? { id, top: el.getBoundingClientRect().top } : null;
+    setOpenId(id === openId ? null : id);
+  };
 
   // Remember where the user is while they browse this page (ignore scrolls after leaving).
   useEffect(() => {
@@ -86,15 +125,17 @@ function RoundTimeline({ data }: { data: LeagueData }) {
   }, [divisionId]);
 
   return (
-    <div className="timeline">
+    <div className="round-acc">
       {rounds.map((r) => (
-        <TimelineRound
+        <AccordionRound
           key={r.id}
           round={r}
           encounters={inRound(r)}
-          ref={(el) => {
-            if (el) roundRefs.current.set(r.id, el);
-            else roundRefs.current.delete(r.id);
+          expanded={r.id === openId}
+          onToggle={() => toggle(r.id)}
+          headerRef={(el) => {
+            if (el) headerRefs.current.set(r.id, el);
+            else headerRefs.current.delete(r.id);
           }}
         />
       ))}
@@ -102,37 +143,70 @@ function RoundTimeline({ data }: { data: LeagueData }) {
   );
 }
 
-function TimelineRound({ round, encounters, ref }: { round: Round; encounters: EncounterDetail[]; ref: Ref<HTMLElement> }) {
+function AccordionRound({
+  round,
+  encounters,
+  expanded,
+  onToggle,
+  headerRef,
+}: {
+  round: Round;
+  encounters: EncounterDetail[];
+  expanded: boolean;
+  onToggle: () => void;
+  headerRef: Ref<HTMLButtonElement>;
+}) {
   const { t } = useTranslation();
   const status = deriveRoundStatus(encounters);
   const time = formatTime(round.startTime);
-  const headingId = `round-${round.id}`;
+  const buttonId = `round-${round.id}`;
+  const panelId = `round-panel-${round.id}`;
+  const Chevron = expanded ? ChevronUp : ChevronDown;
   return (
-    <section className="timeline-round" ref={ref} aria-labelledby={headingId}>
-      <div className="timeline-round__head">
-        <h2 id={headingId} className="timeline-round__title">
-          <Link to={`/live/round/${round.id}`}>{t('round.label', { number: round.number })}</Link>
-        </h2>
-        <span className={`timeline-round__status timeline-round__status--${status}`}>{t(`roundStatus.${status}`)}</span>
-      </div>
-      <p className="timeline-round__meta">
-        {formatDate(round.date)}
-        {time ? ` · ${time}` : ''}
-      </p>
-      {round.venue && <p className="timeline-round__meta">{round.venue}</p>}
-      {encounters.length === 0 ? (
-        <p className="note">{t('live.noEncounters')}</p>
-      ) : (
-        <ul className="list timeline-round__matches">
-          {encounters.map((e) => (
-            <EncounterRow
-              key={e.id}
-              encounter={e}
-              showStatus={e.status !== 'scheduled' && e.status !== 'completed'}
-              quietStatus
-            />
-          ))}
-        </ul>
+    <section className={`round-acc__item${expanded ? ' round-acc__item--open' : ''}`}>
+      <h2 className="round-acc__heading">
+        <button
+          type="button"
+          id={buttonId}
+          ref={headerRef}
+          className="round-acc__header"
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          onClick={onToggle}
+        >
+          <span className="round-acc__text">
+            <span className="round-acc__title">{t('round.label', { number: round.number })}</span>
+            <span className="round-acc__meta">
+              {formatShortDate(round.date)}
+              {' · '}
+              <span className={`round-acc__status round-acc__status--${status}`}>{t(`roundStatus.${status}`)}</span>
+            </span>
+          </span>
+          <Chevron className="round-acc__chevron" size={18} aria-hidden />
+        </button>
+      </h2>
+      {expanded && (
+        <div id={panelId} role="region" aria-labelledby={buttonId} className="round-acc__panel">
+          <p className="round-acc__detail">
+            {formatDate(round.date)}
+            {time ? ` · ${time}` : ''}
+          </p>
+          {round.venue && <p className="round-acc__detail">{round.venue}</p>}
+          {encounters.length === 0 ? (
+            <p className="note">{t('live.noEncounters')}</p>
+          ) : (
+            <ul className="list round-acc__matches">
+              {encounters.map((e) => (
+                <EncounterRow
+                  key={e.id}
+                  encounter={e}
+                  showStatus={e.status !== 'scheduled' && e.status !== 'completed'}
+                  quietStatus
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </section>
   );
