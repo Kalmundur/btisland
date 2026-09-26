@@ -369,6 +369,67 @@
   color: var(--text-muted);
 }
 
+/* Compact: a few headline figures (team Sæti / Stig) – thin border, low height. */
+.stats--compact {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+
+.stats--compact .stats__item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.stats--compact .stats__label {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.stats--compact .stats__value {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* Row: every figure side by side in equal columns, no boxes; fits four at 320px. */
+.stats--row {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stats--row .stats__item {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.stats--row .stats__label {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats--row .stats__value {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+/* Explanation under a stats row (e.g. how the table is ordered). */
+.stats-note {
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
 /* Player result lines */
 .result-line {
   display: grid;

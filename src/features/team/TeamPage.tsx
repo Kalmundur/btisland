@@ -61,6 +61,7 @@ export function TeamPage() {
                       </p>
                       {row && (
                         <Stats
+                          variant="compact"
                           items={[
                             { label: t('team.position'), value: row.tied ? `${row.position} (${t('team.tied')})` : row.position },
                             { label: t('team.points'), value: row.points },
@@ -70,6 +71,7 @@ export function TeamPage() {
                       {row && (
                         <Section title={t('team.encounters')}>
                           <Stats
+                            variant="row"
                             items={[
                               { label: t('team.played'), value: row.played },
                               { label: t('team.wins'), value: row.won },
@@ -80,14 +82,15 @@ export function TeamPage() {
                         </Section>
                       )}
                       {row && (
-                        <Section title={t('team.ranking')}>
+                        <Section title={t('team.statistics')}>
                           <Stats
+                            variant="row"
                             items={[
                               { label: t('team.matches'), value: `${row.matchesWon}–${row.matchesLost}` },
                               { label: t('team.games'), value: `${row.gamesWon}–${row.gamesLost}` },
                             ]}
                           />
-                          <p className="note">{t('team.rankingNote')}</p>
+                          <p className="stats-note">{t('team.rankingNote')}</p>
                         </Section>
                       )}
                       <Section title={t('team.recent')}>

@@ -266,7 +266,7 @@ export const is = {
     wins: 'Sigrar',
     draws: 'Jafntefli',
     losses: 'Töp',
-    ranking: 'Röðun',
+    statistics: 'Tölfræði',
     matches: 'Leikir',
     games: 'Lotur',
     rankingNote: 'Röð ræðst af stigum, síðan hlutfalli unninna/tapaðra leikja og loks lotna.',

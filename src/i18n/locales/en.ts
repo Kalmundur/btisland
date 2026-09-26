@@ -267,7 +267,7 @@ export const en: Translation = {
     wins: 'Wins',
     draws: 'Draws',
     losses: 'Losses',
-    ranking: 'Ranking detail',
+    statistics: 'Statistics',
     matches: 'Matches',
     games: 'Games',
     rankingNote: 'Order is decided by points, then the ratio of matches won/lost, then games won/lost.',
