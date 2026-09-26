@@ -10,7 +10,7 @@ import { TOP_PLAYERS_LIMIT } from '../../config/app';
 import type { LeagueData } from '../../hooks/useLeagueData';
 
 /**
- * Secondary section under the league table: Topp 10 (singles only, officially confirmed
+ * Secondary section under the league table: Topp 5 (singles only, officially confirmed
  * encounters – see rankSinglesPlayers) and a link to the full searchable player list.
  */
 export function TopPlayers({ data }: { data: LeagueData }) {

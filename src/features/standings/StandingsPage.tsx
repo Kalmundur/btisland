@@ -8,7 +8,7 @@ import { TopPlayers } from '../players/TopPlayers';
 /**
  * Compact table: # | Lið | L | S-J-T | Stig. Tiebreak details live on the team page.
  * Officially tied teams share a position; before any official result every rank is "–".
- * Below the table: the Topp 10 player ranking and a link to the full player list.
+ * Below the table: the Topp 5 player ranking and a link to the full player list.
  */
 export function StandingsPage() {
   const { t } = useTranslation();

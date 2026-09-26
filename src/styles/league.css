@@ -204,7 +204,7 @@
   gap: var(--space-1);
 }
 
-/* Topp 10 (Staða) – quieter than the league table above it */
+/* Topp 5 (Staða) – quieter than the league table above it */
 .ranking {
   list-style: none;
   margin: 0;

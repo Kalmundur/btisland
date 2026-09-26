@@ -13,7 +13,7 @@ export const DEFAULT_LANGUAGE: Language = 'is';
 export const STANDINGS_POINTS = { win: 2, draw: 1, loss: 0 } as const;
 
 /** How many players the Players tab ranks. */
-export const TOP_PLAYERS_LIMIT = 10;
+export const TOP_PLAYERS_LIMIT = 5;
 
 /** localStorage keys (kept together so they are easy to migrate). */
 export const STORAGE_KEYS = {

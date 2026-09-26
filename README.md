@@ -171,7 +171,7 @@ If more than one encounter matches, it returns the choices instead of guessing. 
   - Only officially confirmed encounters (`completed`) count. Points are win 2, draw 1 each, loss 0.
   - Order: points, then the ratio of individual matches won/lost, then the ratio of games won/lost. Ratios are compared exactly by cross-multiplication, and a zero-loss record is an infinite ratio.
   - Teams still equal after that share a rank. There is no head-to-head, no point difference, and alphabetical order is used for display only.
-- **Top 10 and player stats** (`src/domain/playerStats.ts`) count singles from confirmed encounters only. Doubles have no effect.
+- **Top 5 and player stats** (`src/domain/playerStats.ts`) count singles from confirmed encounters only. Doubles have no effect.
   - Order: most wins, then fewest losses. Equal records share a rank, and a tie on 10th place is shown in full.
 - **Round status** ("Ekki hafin" / "Í gangi" / "Lokið") is derived from its encounters.
 - **Organizer corrections** (`admin_correct_game`) override a game's score without deleting any player entry.

@@ -95,7 +95,7 @@ export const is = {
   players: {
     rankingNote: 'Aðeins einliðaleikir í staðfestum viðureignum. Röðun: sigrar → töp → lotumunur → stigamunur.',
     title: 'Leikmenn',
-    top: 'Topp 10',
+    top: 'Topp 5',
     colRecord: 'S–T',
     noResults: 'Engin úrslit hafa verið skráð enn.',
     viewAll: 'Sjá alla leikmenn',
@@ -289,7 +289,7 @@ export const is = {
     lost: 'T',
     vs: 'gegn {{name}}',
     with: 'með {{name}}',
-    doublesNote: 'Tvíliðaleikir hafa ekki áhrif á TOPP 10.',
+    doublesNote: 'Tvíliðaleikir hafa ekki áhrif á TOPP 5.',
     team: 'Lið',
     club: 'Félag',
   },

@@ -1,7 +1,7 @@
 /**
  * Player statistics, derived from officially confirmed encounters only.
  *
- * Top 10: SINGLES only (doubles have zero effect). Order:
+ * Top 5: SINGLES only (doubles have zero effect). Order:
  *   1. most singles wins  2. fewest singles losses  3. best set differential
  *   4. best point differential.
  * Players level on all four are genuinely tied and share a position range (e.g. 2–4);

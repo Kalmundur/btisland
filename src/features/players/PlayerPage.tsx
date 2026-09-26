@@ -11,7 +11,7 @@ import { getPlayer, getPlayerNames, listPlayerGames } from '../../data/leagueRep
 import { playerSummary, type PlayerMatchLine } from '../../domain/playerStats';
 import { formatShortDate } from '../../lib/format';
 
-/** /player/:playerId – singles record (Top 10 basis) and a separate doubles section. */
+/** /player/:playerId – singles record (Top 5 basis) and a separate doubles section. */
 export function PlayerPage() {
   const { t } = useTranslation();
   const { playerId = '' } = useParams();

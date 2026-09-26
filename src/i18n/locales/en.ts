@@ -96,7 +96,7 @@ export const en: Translation = {
   players: {
     rankingNote: 'Singles in officially confirmed encounters only. Ranking: wins → losses → set differential → point differential.',
     title: 'Players',
-    top: 'Top 10',
+    top: 'Top 5',
     colRecord: 'W–L',
     noResults: 'No results recorded yet.',
     viewAll: 'View all players',
@@ -290,7 +290,7 @@ export const en: Translation = {
     lost: 'L',
     vs: 'vs {{name}}',
     with: 'with {{name}}',
-    doublesNote: 'Doubles do not affect the TOP 10.',
+    doublesNote: 'Doubles do not affect the TOP 5.',
     team: 'Team',
     club: 'Club',
   },

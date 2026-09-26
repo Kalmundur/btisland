@@ -8,7 +8,7 @@ export const TABS: ReadonlyArray<{ key: TabKey; to: string; prefixes: readonly s
   { key: 'scorecard', to: '/scorecard', prefixes: ['/scorecard'] },
   // /live/* are the schedule's own detail pages (round, match) and old schedule links.
   { key: 'schedule', to: '/schedule', prefixes: ['/schedule', '/live'] },
-  // Team and player pages are reached from Staða (table, Top 10, full player list).
+  // Team and player pages are reached from Staða (table, Top 5, full player list).
   { key: 'standings', to: '/standings', prefixes: ['/standings', '/team', '/player', '/players'] },
   { key: 'settings', to: '/settings', prefixes: ['/settings'] },
 ];
