@@ -222,7 +222,8 @@ function AccordionRound({
                   <EncounterRow
                     key={e.id}
                     encounter={e}
-                    showStatus={e.status !== 'scheduled' && e.status !== 'completed'}
+                    // The score says it all while a match is on; only states the score can't show get a line.
+                    showStatus={e.status === 'awaiting_confirmation' || e.status === 'postponed' || e.status === 'cancelled'}
                     quietStatus
                   />
                 ))}

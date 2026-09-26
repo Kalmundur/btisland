@@ -184,7 +184,7 @@ export const is = {
     doublesTitle: 'Tvíliðaleikur',
     opponent: 'Mótherjar · {{team}}',
     choosePlayer: 'Veldu leikmann',
-    submit: 'Leggja fram',
+    submit: 'Staðfesta',
     saveChange: 'Vista breytingu',
     edit: 'Breyta',
     confirm: 'Staðfesta',

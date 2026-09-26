@@ -185,7 +185,7 @@ export const en: Translation = {
     doublesTitle: 'Doubles',
     opponent: 'Opponent · {{team}}',
     choosePlayer: 'Choose player',
-    submit: 'Submit',
+    submit: 'Confirm',
     saveChange: 'Save change',
     edit: 'Change',
     confirm: 'Confirm',
