@@ -230,9 +230,30 @@
   color: var(--warning);
 }
 
-.match-row--locked .match-row__players,
+/* Only matches that will never be played are dimmed; upcoming ones read as a schedule. */
 .match-row--not_played .match-row__players {
   opacity: 0.55;
+}
+
+.match-group + .match-group {
+  margin-top: var(--space-4);
+}
+
+.match-group__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.match-group__note {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.match-row__pending {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 .match-row__chevron {

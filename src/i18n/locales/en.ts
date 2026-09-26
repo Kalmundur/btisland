@@ -128,6 +128,13 @@ export const en: Translation = {
     en: 'English',
   },
   match: {
+    phase1: 'Matches 1–6',
+    phase2: 'Doubles',
+    phase3: 'Matches 8–10',
+    afterPhase1: 'after matches 1–6',
+    afterDoubles: 'after the doubles',
+    pairsChosenLater: 'Pairs are chosen when matches 1–6 are done',
+    pairsBeingChosen: 'Teams are choosing their doubles pairs',
     title: 'Match {{number}}',
     doubles: 'Doubles',
     game: 'Game {{number}}',
@@ -150,9 +157,7 @@ export const en: Translation = {
     notPlayed: 'Not played',
     pickMatch: 'Choose a match to score',
     scorers: '{{count}} entered',
-    doublesPending: 'Doubles pairs not confirmed',
     status: {
-      locked: 'Locked',
       available: 'Open',
       in_progress: 'In progress',
       conflict: 'Conflict',

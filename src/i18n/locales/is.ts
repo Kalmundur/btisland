@@ -127,6 +127,13 @@ export const is = {
     en: 'English',
   },
   match: {
+    phase1: 'Leikir 1–6',
+    phase2: 'Tvíliðaleikur',
+    phase3: 'Leikir 8–10',
+    afterPhase1: 'eftir leiki 1–6',
+    afterDoubles: 'eftir tvíliðaleik',
+    pairsChosenLater: 'Pör valin þegar leikjum 1–6 lýkur',
+    pairsBeingChosen: 'Liðin velja tvíliðapör',
     title: 'Leikur {{number}}',
     doubles: 'Tvíliðaleikur',
     game: 'Lota {{number}}',
@@ -149,9 +156,7 @@ export const is = {
     notPlayed: 'Ekki leikinn',
     pickMatch: 'Veldu leik til að skrá',
     scorers: '{{count}} skráð',
-    doublesPending: 'Tvíliðapör ekki staðfest',
     status: {
-      locked: 'Læst',
       available: 'Laus',
       in_progress: 'Í gangi',
       conflict: 'Ósamræmi',

@@ -230,9 +230,6 @@ function PublicMatch({ data }: { data: EncounterData }) {
         </Section>
       ) : (
         <Section title={t('live.games')}>
-          {state.phase1Complete && !encounter.doublesRevealedAt && !state.decided && (
-            <p className="note">{t('match.doublesPending')}</p>
-          )}
           <MatchList state={state} data={data} publicView />
           <p className="note">{t('live.expandHint')}</p>
         </Section>

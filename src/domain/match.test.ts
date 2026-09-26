@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { gameWinner, isValidGameScore, matchProgress } from './tableTennis';
 import { MATCH_FORMAT } from './matchFormat';
 import { reconcileGame } from './reconcile';
-import { deriveEncounter } from './encounterState';
+import { deriveEncounter, matchPhaseGroups } from './encounterState';
 import { DOUBLES_CONFIRMATIONS, currentConfirmers, resultConfirmationState, selectionProgress } from './confirmation';
 import { validateDoubles, validateLineup } from './lineup';
 import { scorerView } from './scorer';
@@ -258,5 +258,23 @@ describe('scorer view', () => {
     const v = scorerView([game(1, 1, null, null, 'conflict')], [{ gameNumber: 1, homePoints: 11, awayPoints: 8, pending: false }]);
     expect(v.rows[0]).toMatchObject({ conflict: true, homePoints: 11, awayPoints: 8 });
     expect(v.nextGame).toBe(2);
+  });
+});
+
+describe('match phase groups (scoresheet layout)', () => {
+  it('groups 1–6, doubles and 8–10, marking phases that have not opened yet', () => {
+    const groups = matchPhaseGroups(revealed([], false));
+    expect(groups.map((g) => [g.phase, g.matches.map((m) => m.number), g.waiting])).toEqual([
+      [1, [1, 2, 3, 4, 5, 6], false],
+      [2, [7], true],
+      [3, [8, 9, 10], true],
+    ]);
+  });
+
+  it('a phase stops waiting once it opens, and "not played" is not "waiting"', () => {
+    const phase1 = [...won(1, 'home'), ...won(2, 'away'), ...won(3, 'home'), ...won(4, 'away'), ...won(5, 'home'), ...won(6, 'away')];
+    expect(matchPhaseGroups(revealed(phase1, true)).map((g) => g.waiting)).toEqual([false, false, true]);
+    const sweep = [1, 2, 3, 4, 5, 6].flatMap((m) => won(m, 'home'));
+    expect(matchPhaseGroups(revealed(sweep, false)).map((g) => g.waiting)).toEqual([false, false, false]);
   });
 });

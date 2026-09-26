@@ -115,3 +115,22 @@ export function deriveEncounter({ lineupsRevealed, doublesRevealed, games, forma
     hasOpenConflict: matches.some((m) => m.status === 'conflict'),
   };
 }
+
+export interface MatchPhaseGroup {
+  phase: MatchState['phase'];
+  matches: MatchState[];
+  /** The phase has not opened yet (every match still waits for the previous phase). */
+  waiting: boolean;
+}
+
+/**
+ * The encounter's matches grouped as on a paper scoresheet: 1–6, doubles, 8–10.
+ * Presentation only – the order is enforced by the database.
+ */
+export function matchPhaseGroups(state: Pick<EncounterState, 'matches'>): MatchPhaseGroup[] {
+  const phases = [...new Set(state.matches.map((m) => m.phase))];
+  return phases.map((phase) => {
+    const matches = state.matches.filter((m) => m.phase === phase);
+    return { phase, matches, waiting: matches.every((m) => m.status === 'locked') };
+  });
+}
