@@ -34,23 +34,32 @@ export function SettingsPage() {
         </Section>
 
         <Section title={t('settings.profile')}>
-          {/* Which player this device is using – informational, no destination. */}
+          {/* Which player this device is using – informational, no destination. Its one action sits
+              inside the row, under the name, so both states share the same layout. */}
           <List>
-            <ListRow
-              leading={<UserRound size={20} aria-hidden />}
-              title={player?.fullName ?? (playerId ? '…' : t('profile.notSet'))}
-              subtitle={player ? [player.clubName, player.teamName].filter(Boolean).join(' · ') : undefined}
-            />
+            <li>
+              <div className="list-row profile-row">
+                <span className="list-row__leading">
+                  <UserRound size={20} aria-hidden />
+                </span>
+                <div className="list-row__main">
+                  <span className="list-row__title">{player?.fullName ?? (playerId ? '…' : t('profile.notSet'))}</span>
+                  {player && (
+                    <span className="list-row__subtitle">{[player.clubName, player.teamName].filter(Boolean).join(' · ')}</span>
+                  )}
+                  {playerId ? (
+                    <Button variant="secondary" className="settings-action" icon={<LogOut size={16} aria-hidden />} onClick={() => setConfirmLogout(true)}>
+                      {t('profile.logout')}
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" className="settings-action" onClick={() => navigate('/scorecard')}>
+                      {t('profile.setupTitle')}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </li>
           </List>
-          {playerId ? (
-            <Button variant="secondary" className="settings-action" icon={<LogOut size={18} aria-hidden />} onClick={() => setConfirmLogout(true)}>
-              {t('profile.logout')}
-            </Button>
-          ) : (
-            <Button variant="secondary" className="settings-action" onClick={() => navigate('/scorecard')}>
-              {t('profile.setupTitle')}
-            </Button>
-          )}
         </Section>
 
         <Section title={t('settings.about')}>

@@ -932,12 +932,25 @@
 }
 
 /* ==========================================================================
-   Settings: compact secondary action under a list (e.g. "Skrá út")
+   Settings: profile row with its compact action ("Setja upp prófíl" / "Skrá út")
    ========================================================================== */
+/* The row's one action sits under the name, aligned with it; same layout in both states. */
+.profile-row {
+  align-items: flex-start;
+  padding: var(--space-3) 0;
+}
+
+.profile-row .list-row__leading {
+  padding-top: 1px;
+}
+
 .settings-action {
   align-self: flex-start;
   min-height: var(--touch-min);
+  margin-top: var(--space-2);
   padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
