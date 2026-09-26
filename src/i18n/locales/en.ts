@@ -145,8 +145,6 @@ export const en: Translation = {
     finished: 'Match finished',
     allMatches: 'All matches',
     edit: 'Edit',
-    decrease: 'Decrease {{name}}',
-    increase: 'Increase {{name}}',
     typeScore: 'Type points for {{name}}',
     conflictIn: 'Conflict in game {{number}}',
     conflictHelp: 'Entries disagree. Correct your entry if it is wrong.',

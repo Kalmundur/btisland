@@ -16,8 +16,9 @@ export const scorecardRoute = {
 export interface ScoreDraft {
   gameNumber: number;
   editing: boolean;
-  home: number;
-  away: number;
+  /** null = field still empty */
+  home: number | null;
+  away: number | null;
 }
 
 const drafts = new Map<string, ScoreDraft>();

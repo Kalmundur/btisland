@@ -144,8 +144,6 @@ export const is = {
     finished: 'Leik lokið',
     allMatches: 'Allir leikir',
     edit: 'Breyta',
-    decrease: 'Lækka {{name}}',
-    increase: 'Hækka {{name}}',
     typeScore: 'Slá inn stig fyrir {{name}}',
     conflictIn: 'Ósamræmi í lotu {{number}}',
     conflictHelp: 'Skráningar stangast á. Leiðréttu þína skráningu ef hún er röng.',

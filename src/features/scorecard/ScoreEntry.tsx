@@ -8,7 +8,7 @@ import { isValidGameScore } from '../../domain/tableTennis';
 import { scorerView, type OwnEntry } from '../../domain/scorer';
 import { matchParticipants, type EncounterData } from '../../hooks/useEncounterData';
 import { newClientEntryId, scoreOutbox, useOutbox } from '../../offline/scoreSync';
-import { ScoreStepper } from './ScoreStepper';
+import { ScoreInput, type GameScoreDraft } from './ScoreInput';
 import { scoreDrafts } from './scorecardMemory';
 
 /**
@@ -51,15 +51,16 @@ export function ScoreEntry({
   });
   const [editingGame, setEditingGame] = useState<number | null>(initialDraft?.editing ? initialDraft.gameNumber : null);
   const currentGame = editingGame ?? view.nextGame;
-  const [score, setScore] = useState(initialDraft ? { home: initialDraft.home, away: initialDraft.away } : { home: 0, away: 0 });
+  const empty: GameScoreDraft = { home: null, away: null };
+  const [score, setScore] = useState<GameScoreDraft>(initialDraft ? { home: initialDraft.home, away: initialDraft.away } : empty);
   const [openConflict, setOpenConflict] = useState<number | null>(null);
   const lastGame = useRef(currentGame);
 
-  // Fresh 0–0 whenever the game being entered changes.
+  // Empty fields whenever the game being entered changes.
   useEffect(() => {
     if (lastGame.current === currentGame) return;
     lastGame.current = currentGame;
-    if (editingGame === null) setScore({ home: 0, away: 0 });
+    if (editingGame === null) setScore({ home: null, away: null });
   }, [currentGame, editingGame]);
 
   useEffect(() => {
@@ -74,10 +75,10 @@ export function ScoreEntry({
   const awayLetter = match.kind === 'doubles' ? null : match.awaySlot;
 
   const scoringOpen = ['available', 'in_progress', 'conflict', 'completed'].includes(match.status) && encounter.status !== 'completed';
-  const valid = isValidGameScore(score.home, score.away);
+  const valid = score.home !== null && score.away !== null && isValidGameScore(score.home, score.away);
 
   const confirmGame = async () => {
-    if (!currentGame || !valid) return;
+    if (!currentGame || !valid || score.home === null || score.away === null) return;
     const decidesMatch =
       editingGame === null &&
       scorerView(match.games, [...mine, { gameNumber: currentGame, homePoints: score.home, awayPoints: score.away, pending: true }]).winner !== null;
@@ -91,14 +92,14 @@ export function ScoreEntry({
       queuedAt: Date.now(),
     });
     setEditingGame(null);
-    setScore({ home: 0, away: 0 });
+    setScore(empty);
     scoreDrafts.clear(draftKey);
     if (decidesMatch) navigate('/scorecard');
   };
 
   const startEdit = (gameNumber: number, home: number | null, away: number | null) => {
     setEditingGame(gameNumber);
-    setScore({ home: home ?? 0, away: away ?? 0 });
+    setScore({ home, away });
   };
 
   const othersFor = (gameNumber: number) =>
@@ -208,10 +209,12 @@ export function ScoreEntry({
           <p className="score-card__game">
             {editingGame ? t('match.updateGame', { number: editingGame }) : t('match.game', { number: currentGame })}
           </p>
-          <ScoreStepper
-            home={{ name: homeName, letter: homeLetter, value: score.home }}
-            away={{ name: awayName, letter: awayLetter, value: score.away }}
-            onChange={(home, away) => setScore({ home, away })}
+          <ScoreInput
+            home={{ name: homeName, letter: homeLetter }}
+            away={{ name: awayName, letter: awayLetter }}
+            value={score}
+            onChange={setScore}
+            onSubmit={() => void confirmGame()}
           />
           <Button block onClick={() => void confirmGame()} disabled={!valid}>
             {t('match.confirmGame')}
