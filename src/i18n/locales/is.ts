@@ -246,11 +246,6 @@ export const is = {
     dismiss: 'Loka',
   },
   live: {
-    active: 'Í gangi',
-    upcoming: 'Næsta umferð',
-    recent: 'Nýleg úrslit',
-    allRounds: 'Allar umferðir',
-    noActive: 'Engin viðureign í gangi núna.',
     awaitingConfirmation: 'Leik lokið – bíður staðfestingar',
     resultConfirmed: 'Niðurstaða staðfest',
     conflicts: '{{count}} ósamræmi',

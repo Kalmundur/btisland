@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeStandings } from './standings';
 import { compareRatio } from './ratio';
 import { playerSummary, rankSinglesPlayers, type GameWithContext } from './playerStats';
-import { deriveRoundStatus, liveOverview } from './rounds';
+import { deriveRoundStatus, focusRound, liveOverview } from './rounds';
 import type { Encounter, EncounterGame, EncounterStatus, Round } from './types';
 
 // --- fixtures -----------------------------------------------------------------------------
@@ -248,8 +248,63 @@ describe('derived round status', () => {
       { roundId: 'r3', status: 'scheduled' as const },
     ];
     const o = liveOverview(rounds, encs, '2026-10-17');
-    expect(o.active).toHaveLength(1);
+    expect(o.ongoing.map((r) => r.id)).toEqual(['r2']);
     expect(o.upcoming?.id).toBe('r3');
     expect(o.recent.map((r) => r.id)).toEqual(['r1']);
+  });
+
+  it('lists every round in progress, in playing order, and none when nothing has started', () => {
+    const round = (id: string, number: number, date: string): Round => ({ id, divisionId: 'd', number, date, startTime: null, venue: null });
+    const rounds = [round('r2', 2, '2026-09-19'), round('r1', 1, '2026-09-19'), round('r3', 3, '2026-10-17')];
+    const sameDay = [
+      { roundId: 'r1', status: 'awaiting_confirmation' as const },
+      { roundId: 'r1', status: 'completed' as const },
+      { roundId: 'r2', status: 'lineups' as const },
+      { roundId: 'r3', status: 'scheduled' as const },
+    ];
+    expect(liveOverview(rounds, sameDay, '2026-09-19').ongoing.map((r) => r.id)).toEqual(['r1', 'r2']);
+    const preseason = sameDay.map((e) => ({ ...e, status: 'scheduled' as const }));
+    const o = liveOverview(rounds, preseason, '2026-09-01');
+    expect(o.ongoing).toEqual([]);
+    expect(o.upcoming?.id).toBe('r1');
+  });
+});
+
+describe('live timeline focus round', () => {
+  const round = (n: number, date: string): Round => ({ id: `r${n}`, divisionId: 'd', number: n, date, startTime: null, venue: null });
+  // One round a week from 1 Sep: r1 09-01, r2 09-08, r3 09-15, r4 09-22, r5 09-29 ...
+  const rounds = Array.from({ length: 10 }, (_, i) => round(i + 1, new Date(Date.UTC(2026, 8, 1 + 7 * i)).toISOString().slice(0, 10)));
+  const encounters = (statusFor: (n: number) => EncounterStatus) =>
+    rounds.flatMap((r) => [0, 1, 2].map(() => ({ roundId: r.id, status: statusFor(r.number) })));
+
+  it('A: rounds 1–2 done, 3 ongoing -> Umferð 3', () => {
+    const e = encounters((n) => (n <= 2 ? 'completed' : n === 3 ? 'in_progress' : 'scheduled'));
+    expect(focusRound(rounds, e, '2026-09-15')?.number).toBe(3);
+  });
+
+  it('A2: a round with one match still awaiting confirmation counts as ongoing', () => {
+    const e = encounters((n) => (n <= 3 ? 'completed' : 'scheduled')).map((x, i) => (i === 8 ? { ...x, status: 'awaiting_confirmation' as const } : x));
+    expect(focusRound(rounds, e, '2026-09-22')?.number).toBe(3);
+  });
+
+  it('B: rounds 1–3 done, none ongoing -> Umferð 4', () => {
+    const e = encounters((n) => (n <= 3 ? 'completed' : 'scheduled'));
+    expect(focusRound(rounds, e, '2026-09-20')?.number).toBe(4);
+  });
+
+  it('C: every round done -> Umferð 10', () => {
+    expect(focusRound(rounds, encounters(() => 'completed'), '2027-06-01')?.number).toBe(10);
+  });
+
+  it('the first ongoing round wins when two are in progress, whatever the input order', () => {
+    const e = encounters((n) => (n === 5 || n === 6 ? 'in_progress' : n < 5 ? 'completed' : 'scheduled'));
+    expect(focusRound([...rounds].reverse(), e, '2026-10-06')?.number).toBe(5);
+  });
+
+  it('an unplayed round with a past date (e.g. postponed) is used only if nothing later is upcoming', () => {
+    const e = encounters((n) => (n <= 2 ? 'completed' : n === 3 ? 'postponed' : 'scheduled'));
+    expect(focusRound(rounds, e, '2026-09-20')?.number).toBe(4);
+    expect(focusRound(rounds.slice(0, 3), e, '2026-09-20')?.number).toBe(3);
+    expect(focusRound([], [], '2026-09-20')).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Link, useParams } from 'react-router';
+import { useEffect, useLayoutEffect, useRef, type Ref } from 'react';
+import { Link, useNavigationType, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { Section } from '../../components/List';
@@ -12,14 +12,17 @@ import { useLeagueData, type LeagueData } from '../../hooks/useLeagueData';
 import { useDerivedEncounter, useEncounterData, type EncounterData } from '../../hooks/useEncounterData';
 import { getDivision, getRound, listRoundEncounters } from '../../data/leagueRepository';
 import { subscribeToEncounterSet } from '../../data/encounterRepository';
-import { deriveRoundStatus, liveOverview } from '../../domain/rounds';
+import { deriveRoundStatus, focusRound } from '../../domain/rounds';
 import { todayInIceland } from '../../domain/activeSession';
 import { formatDate, formatTime } from '../../lib/format';
 import type { EncounterDetail, Round } from '../../domain/types';
 import { OpponentSelectionStatus } from '../scorecard/SelectionPanel';
 import { useOutcomeText } from '../scorecard/ResultPanel';
 
-/** /live – public landing: in progress now, next round, recent results, all rounds. */
+/**
+ * /live – the whole season as one chronological timeline (Umferð 1 … 10, each once).
+ * The page opens at the most relevant round; earlier rounds are above, later below.
+ */
 export function LivePage() {
   const { t } = useTranslation();
   const data = useLeagueData();
@@ -31,83 +34,107 @@ export function LivePage() {
         actions={<ShareButton title={t('live.title')} />}
       />
       <div className="page">
-        <AsyncBoundary state={data}>{(d) => (d ? <LiveOverview data={d} /> : <EmptyState>{t('standings.noSeason')}</EmptyState>)}</AsyncBoundary>
+        <AsyncBoundary state={data}>{(d) => (d ? <RoundTimeline data={d} /> : <EmptyState>{t('standings.noSeason')}</EmptyState>)}</AsyncBoundary>
       </div>
     </>
   );
 }
 
-function RoundBlock({ round, encounters }: { round: Round; encounters: EncounterDetail[] }) {
-  const { t } = useTranslation();
+/** Scroll position of the timeline per division, so coming back from a match restores it. */
+const timelineScroll = new Map<string, number>();
+
+function pageHeaderHeight(): number {
+  return Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-header-h')) || 0;
+}
+
+function RoundTimeline({ data }: { data: LeagueData }) {
+  const navigationType = useNavigationType();
+  const divisionId = data.league.division.id;
+  const rounds = [...data.rounds].sort((a, b) => a.number - b.number);
+  const inRound = (r: Round) => data.encounters.filter((e) => e.roundId === r.id);
+  const roundRefs = useRef(new Map<string, HTMLElement>());
+  // Which division the view has been positioned for – realtime updates re-render this
+  // component with fresh data but never move the view again.
+  const positionedFor = useRef<string | null>(null);
+
+  // Before the first paint (no visible jump): back navigation restores the saved position,
+  // any other arrival opens at the most relevant round.
+  useLayoutEffect(() => {
+    if (positionedFor.current === divisionId) return;
+    positionedFor.current = divisionId;
+    const saved = timelineScroll.get(divisionId);
+    if (navigationType === 'POP' && saved !== undefined) {
+      window.scrollTo(0, saved);
+      return;
+    }
+    const focus = focusRound(data.rounds, data.encounters, todayInIceland());
+    const el = focus ? roundRefs.current.get(focus.id) : undefined;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - pageHeaderHeight();
+    window.scrollTo(0, Math.max(0, top));
+    // data and navigationType are deliberately read once per division, not on every update.
+  }, [divisionId]);
+
+  // Remember where the user is while they browse this page (ignore scrolls after leaving).
+  useEffect(() => {
+    const path = window.location.pathname;
+    const save = () => {
+      if (window.location.pathname === path) timelineScroll.set(divisionId, window.scrollY);
+    };
+    window.addEventListener('scroll', save, { passive: true });
+    return () => window.removeEventListener('scroll', save);
+  }, [divisionId]);
+
   return (
-    <div className="round-block">
-      <Link to={`/live/round/${round.id}`} className="round-block__head">
-        <span className="round-block__title">{t('round.label', { number: round.number })}</span>
-        <span className="round-block__meta">
-          {formatDate(round.date)}
-          {round.venue ? ` · ${round.venue}` : ''}
-        </span>
-      </Link>
-      <ul className="list">
-        {encounters.map((e) => (
-          <EncounterRow key={e.id} encounter={e} showStatus={e.status !== 'scheduled' && e.status !== 'completed'} />
-        ))}
-      </ul>
+    <div className="timeline">
+      {rounds.map((r) => (
+        <TimelineRound
+          key={r.id}
+          round={r}
+          encounters={inRound(r)}
+          ref={(el) => {
+            if (el) roundRefs.current.set(r.id, el);
+            else roundRefs.current.delete(r.id);
+          }}
+        />
+      ))}
     </div>
   );
 }
 
-function LiveOverview({ data }: { data: LeagueData }) {
+function TimelineRound({ round, encounters, ref }: { round: Round; encounters: EncounterDetail[]; ref: Ref<HTMLElement> }) {
   const { t } = useTranslation();
-  const overview = liveOverview(data.rounds, data.encounters, todayInIceland());
-  const inRound = (r: Round) => data.encounters.filter((e) => e.roundId === r.id);
-  const statusOf = (r: Round) => deriveRoundStatus(inRound(r));
-
+  const status = deriveRoundStatus(encounters);
+  const time = formatTime(round.startTime);
+  const headingId = `round-${round.id}`;
   return (
-    <>
-      <Section title={t('live.active')}>
-        {overview.active.length === 0 ? (
-          <p className="note">{t('live.noActive')}</p>
-        ) : (
-          <ul className="list">
-            {overview.active.map((e) => (
-              <EncounterRow key={e.id} encounter={e} showStatus />
-            ))}
-          </ul>
-        )}
-      </Section>
-
-      {overview.upcoming && (
-        <Section title={t('live.upcoming')}>
-          <RoundBlock round={overview.upcoming} encounters={inRound(overview.upcoming)} />
-        </Section>
-      )}
-
-      {overview.recent.length > 0 && (
-        <Section title={t('live.recent')}>
-          {overview.recent.map((r) => (
-            <RoundBlock key={r.id} round={r} encounters={inRound(r)} />
-          ))}
-        </Section>
-      )}
-
-      <Section title={t('live.allRounds')}>
-        <ul className="list">
-          {data.rounds.map((r) => (
-            <li key={r.id}>
-              <Link to={`/live/round/${r.id}`} className="round-row">
-                <span className="round-row__no num">{r.number}</span>
-                <span className="round-row__main">
-                  <span className="round-row__date">{formatDate(r.date)}</span>
-                  <span className="round-row__venue">{r.venue}</span>
-                </span>
-                <span className={`round-status round-status--${statusOf(r)}`}>{t(`roundStatus.${statusOf(r)}`)}</span>
-              </Link>
-            </li>
+    <section className="timeline-round" ref={ref} aria-labelledby={headingId}>
+      <div className="timeline-round__head">
+        <h2 id={headingId} className="timeline-round__title">
+          <Link to={`/live/round/${round.id}`}>{t('round.label', { number: round.number })}</Link>
+        </h2>
+        <span className={`timeline-round__status timeline-round__status--${status}`}>{t(`roundStatus.${status}`)}</span>
+      </div>
+      <p className="timeline-round__meta">
+        {formatDate(round.date)}
+        {time ? ` · ${time}` : ''}
+      </p>
+      {round.venue && <p className="timeline-round__meta">{round.venue}</p>}
+      {encounters.length === 0 ? (
+        <p className="note">{t('live.noEncounters')}</p>
+      ) : (
+        <ul className="list timeline-round__matches">
+          {encounters.map((e) => (
+            <EncounterRow
+              key={e.id}
+              encounter={e}
+              showStatus={e.status !== 'scheduled' && e.status !== 'completed'}
+              quietStatus
+            />
           ))}
         </ul>
-      </Section>
-    </>
+      )}
+    </section>
   );
 }
 

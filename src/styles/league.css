@@ -12,6 +12,17 @@
   margin-top: -2px;
 }
 
+.enc-row__status {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.enc-row__status--in_progress,
+.enc-row__status--lineups {
+  color: var(--accent-strong);
+}
+
 .enc-row__conflicts {
   font-size: var(--text-xs);
   font-weight: 700;
@@ -45,64 +56,67 @@
 }
 
 /* Rounds */
-.round-block {
+/* Live timeline: every round once, in numeric order – a plain sports schedule. */
+.timeline {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
 }
 
-.round-block + .round-block {
-  margin-top: var(--space-3);
+.timeline-round {
+  padding: var(--space-4) 0 var(--space-2);
+  border-top: 1px solid var(--border-strong);
+  /* Leave room for the sticky page header when a round is scrolled into view. */
+  scroll-margin-top: var(--page-header-h, var(--header-height));
 }
 
-.round-block__head {
+.timeline-round:first-child {
+  border-top: 0;
+  padding-top: var(--space-2);
+}
+
+.timeline-round__head {
   display: flex;
-  flex-direction: column;
-  min-height: var(--touch-min);
-  justify-content: center;
-}
-
-.round-block__title {
-  font-weight: 800;
-}
-
-.round-block__meta {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.round-row {
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  align-items: center;
+  justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-3);
-  min-height: 56px;
 }
 
-.round-row:active {
-  background: var(--bg-subtle);
+.timeline-round__title {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
-.round-row__no {
-  font-weight: 900;
-  color: var(--text-faint);
-  text-align: right;
+.timeline-round__title a {
+  display: inline-block;
+  min-height: var(--touch-min);
+  line-height: var(--touch-min);
+  margin: calc((var(--touch-min) - 1.4em) / -2) 0;
 }
 
-.round-row__main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.round-row__date {
+.timeline-round__status {
+  font-size: var(--text-xs);
   font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
-.round-row__venue {
+.timeline-round__status--in_progress {
+  color: var(--accent-strong);
+}
+
+.timeline-round__meta {
   font-size: var(--text-sm);
   color: var(--text-muted);
   overflow-wrap: anywhere;
+}
+
+.timeline-round__matches {
+  margin-top: var(--space-2);
+}
+
+.timeline-round__matches > li:last-child {
+  border-bottom: 0;
 }
 
 .round-status {

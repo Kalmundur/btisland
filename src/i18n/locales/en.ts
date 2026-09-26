@@ -247,11 +247,6 @@ export const en: Translation = {
     dismiss: 'Dismiss',
   },
   live: {
-    active: 'In progress',
-    upcoming: 'Next round',
-    recent: 'Recent results',
-    allRounds: 'All rounds',
-    noActive: 'No encounter in progress right now.',
     awaitingConfirmation: 'Finished – awaiting confirmation',
     resultConfirmed: 'Result confirmed',
     conflicts: '{{count}} conflict(s)',

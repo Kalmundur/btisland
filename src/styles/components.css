@@ -670,6 +670,17 @@
   color: var(--accent);
 }
 
+.enc-row__score--final {
+  color: var(--text);
+}
+
+/* "gegn": a quiet separator, never stronger than the team names. */
+.enc-row__score--vs {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
 /* Score header: the overall score dominates, team names share one neutral weight,
    round/status and date/venue are quiet metadata lines. */
 .match-head {

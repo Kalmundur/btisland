@@ -15,18 +15,21 @@ function hasScore(e: EncounterDetail) {
 
 /**
  * Compact schedule/result row: home – score – away.
- * `showStatus` adds a status line (with an optional conflict count, e.g. for organizers).
+ * `showStatus` adds a status line (with an optional conflict count, e.g. for organizers);
+ * `quietStatus` shows it as small text under the score instead of a badge (live timeline).
  */
 export function EncounterRow({
   encounter,
   showDate,
   showStatus,
+  quietStatus = false,
   conflicts = 0,
   to,
 }: {
   encounter: EncounterDetail;
   showDate?: boolean;
   showStatus?: boolean;
+  quietStatus?: boolean;
   conflicts?: number;
   to?: string;
 }) {
@@ -34,17 +37,22 @@ export function EncounterRow({
   const e = encounter;
   const live = e.status === 'in_progress' || e.status === 'lineups' || e.status === 'awaiting_confirmation';
   const scored = hasScore(e) && e.status !== 'scheduled';
+  const scoreClass = live ? ' enc-row__score--live' : scored ? ' enc-row__score--final' : ' enc-row__score--vs';
   return (
     <li>
       <Link to={to ?? `/live/match/${e.id}`} className="enc-row">
         <span className="enc-row__team enc-row__team--home">{e.homeTeamName}</span>
-        <span className={`enc-row__score num${live ? ' enc-row__score--live' : ''}`}>
+        <span className={`enc-row__score num${scoreClass}`}>
           {scored ? `${e.homeScore}–${e.awayScore}` : showDate ? formatShortDate(e.round.date) : t('common.vs')}
         </span>
         <span className="enc-row__team enc-row__team--away">{e.awayTeamName}</span>
         {showStatus && (
           <span className="enc-row__meta">
-            <StatusBadge status={e.status} />
+            {quietStatus ? (
+              <span className={`enc-row__status enc-row__status--${e.status}`}>{t(`status.${e.status}`)}</span>
+            ) : (
+              <StatusBadge status={e.status} />
+            )}
             {conflicts > 0 && <span className="enc-row__conflicts">{t('live.conflicts', { count: conflicts })}</span>}
           </span>
         )}
