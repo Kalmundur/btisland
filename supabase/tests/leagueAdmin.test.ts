@@ -146,4 +146,36 @@ describe('league administration (database)', { timeout: 60_000 }, () => {
     const audit = await t.query<{ details: { before: string; after: string } }>("select details from public.audit_log where action = 'set_status' order by id");
     expect(audit.map((a) => [a.details.before, a.details.after])).toEqual([['scheduled', 'postponed'], ['postponed', 'scheduled']]);
   });
+  it('a team plays in one division per season, is created into it, and stays once it has encounters', async () => {
+    const [{ id: div1, season_id: season }] = await t.query<{ id: string; season_id: string }>(
+      "select d.id, d.season_id from public.divisions d join public.encounters e on true join public.rounds r on r.id = e.round_id and r.division_id = d.id where e.id = $1",
+      [enc],
+    );
+    const [{ id: div2 }] = await t.query<{ id: string }>("insert into public.divisions (season_id, name) values ($1, '2. deild karla') returning id", [season]);
+    const [{ id: club }] = await t.query<{ id: string }>("select id from public.clubs where short_name = 'KR'");
+    const [{ id: krB }] = await t.query<{ id: string }>("select id from public.teams where name = 'KR-B'");
+
+    // Existing entries got their season.
+    expect(await t.query('select 1 from public.division_teams where season_id is null')).toHaveLength(0);
+
+    // Created together with its division; only organizers may do it.
+    expect(await err(t.as(h1.userId, () => t.query("select public.admin_create_team('KR-C', $1, $2)", [club, div2])))).toContain('forbidden');
+    expect(await err(asOrg("select public.admin_create_team('KR-C', $1, null)", [club]))).toContain('division_required');
+    const [{ id: krC }] = await asOrg("select public.admin_create_team('KR-C', $1, $2) as id", [club, div2]) as Array<{ id: string }>;
+    expect(await t.query('select division_id, season_id from public.division_teams where team_id = $1', [krC])).toEqual([{ division_id: div2, season_id: season }]);
+
+    // A second division in the same season is refused.
+    expect(await err(asOrg('insert into public.division_teams (division_id, team_id) values ($1, $2)', [div1, krC]))).toContain('team_already_in_season');
+    expect(await err(asOrg('update public.division_teams set division_id = $1 where team_id = $2', [div2, krB]))).toContain('team_has_encounters');
+
+    // No encounters yet: the division can still be changed. With encounters: it cannot.
+    await asOrg('update public.division_teams set division_id = $1 where team_id = $2', [div1, krC]);
+    await asOrg('delete from public.division_teams where team_id = $1', [krC]);
+    expect(await err(asOrg('delete from public.division_teams where team_id = $1 and division_id = $2', [krB, div1]))).toContain('team_has_encounters');
+    expect(await t.query('select 1 from public.division_teams where team_id = $1', [krB])).toHaveLength(1);
+
+    // Deleting a whole division still cascades.
+    await asOrg('delete from public.divisions where id = $1', [div1]);
+    expect(await t.query('select 1 from public.division_teams where division_id = $1', [div1])).toHaveLength(0);
+  });
 });

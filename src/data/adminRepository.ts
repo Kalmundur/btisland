@@ -17,13 +17,15 @@ export type AdminTable =
 
 export type AdminRow = Record<string, unknown>;
 
+/** `select` can embed related rows, e.g. `'*, season:seasons(name)'`. */
 export async function listRows(
   table: AdminTable,
   order: ReadonlyArray<{ column: string; ascending?: boolean }>,
+  select = '*',
 ): Promise<AdminRow[]> {
-  let query = requireSupabase().from(table).select('*');
+  let query = requireSupabase().from(table).select(select);
   for (const o of order) query = query.order(o.column, { ascending: o.ascending ?? true });
-  return unwrap(await query) as AdminRow[];
+  return unwrap(await query) as unknown as AdminRow[];
 }
 
 export async function insertRow(table: AdminTable, values: AdminRow): Promise<void> {
@@ -48,6 +50,19 @@ export async function listRowsWhere(
   let query = requireSupabase().from(table).select('*').match(match);
   for (const o of order) query = query.order(o.column, { ascending: o.ascending ?? true });
   return unwrap(await query) as AdminRow[];
+}
+
+/** Creates a team and enters it into its division in one step (a team needs a division). */
+export async function createTeam(values: AdminRow): Promise<void> {
+  unwrap(
+    await requireSupabase().rpc('admin_create_team', {
+      p_name: values.name,
+      p_club_id: values.club_id,
+      p_division_id: values.division_id,
+      p_is_active: values.is_active,
+      p_is_public: values.is_public,
+    }),
+  );
 }
 
 // Round access codes --------------------------------------------------------------------

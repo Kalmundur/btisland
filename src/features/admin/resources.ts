@@ -3,7 +3,7 @@
  * so adding a column is a one-line change here.
  */
 import { Building2, CalendarDays, CalendarRange, Layers, Shield, User, type LucideIcon } from 'lucide-react';
-import type { AdminRow, AdminTable } from '../../data/adminRepository';
+import { createTeam, type AdminRow, type AdminTable } from '../../data/adminRepository';
 import type { Translation } from '../../i18n/locales/is';
 
 export type FieldKey = keyof Translation['admin']['fields'];
@@ -13,6 +13,8 @@ export interface RefOptions {
   table: AdminTable;
   order: ReadonlyArray<{ column: string; ascending?: boolean }>;
   label: (row: AdminRow) => string;
+  /** Columns to load, e.g. to embed a related name in the label. Default `*`. */
+  select?: string;
 }
 
 export interface FieldConfig {
@@ -28,6 +30,8 @@ export interface FieldConfig {
   ref?: RefOptions;
   /** Static select options: value + i18n key. */
   options?: ReadonlyArray<{ value: string; labelKey: string }>;
+  /** Only asked when creating (not a column of the table; never edited afterwards). */
+  createOnly?: boolean;
 }
 
 export interface ResourceConfig {
@@ -42,6 +46,8 @@ export interface ResourceConfig {
   editable?: boolean;
   /** Optional per-row detail page. */
   detailPath?: (row: AdminRow) => string;
+  /** Custom create (e.g. an RPC that also writes a related row). Default: plain insert. */
+  create?: (values: AdminRow) => Promise<void>;
 }
 
 const str = (v: unknown) => (v == null ? '' : String(v));
@@ -52,6 +58,12 @@ const REF = {
   player: { table: 'players', order: [{ column: 'full_name' }], label: (r) => str(r.full_name) },
   season: { table: 'seasons', order: [{ column: 'name', ascending: false }], label: (r) => str(r.name) },
   division: { table: 'divisions', order: [{ column: 'sort_order' }], label: (r) => str(r.name) },
+  divisionWithSeason: {
+    table: 'divisions',
+    order: [{ column: 'sort_order' }],
+    select: '*, season:seasons(name)',
+    label: (r) => `${str(r.name)} · ${str((r.season as { name?: string } | null)?.name)}`,
+  },
 } satisfies Record<string, RefOptions>;
 
 /** Competition formats a division can use (mirrors public.competition_formats). */
@@ -86,9 +98,12 @@ export const RESOURCES: ResourceConfig[] = [
     primaryKey: ['id'],
     order: [{ column: 'name' }],
     detailPath: (row) => `/admin/teams/${str(row.id)}`,
+    // A team is created straight into its division; later seasons are added on the team page.
+    create: createTeam,
     fields: [
       { name: 'name', label: 'name', type: 'text', required: true, list: true },
       { name: 'club_id', label: 'club', type: 'select', required: true, list: true, ref: REF.club },
+      { name: 'division_id', label: 'division', type: 'select', required: true, createOnly: true, ref: REF.divisionWithSeason },
       { name: 'is_active', label: 'isActive', type: 'checkbox', defaultValue: true, list: true },
       { name: 'is_public', label: 'isPublic', type: 'checkbox', defaultValue: true },
     ],

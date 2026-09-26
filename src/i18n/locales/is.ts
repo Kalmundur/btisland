@@ -327,6 +327,11 @@ export const is = {
       noRound: 'Engin umferð skráð.',
       otherConflicts: 'Ósamræmi í öðrum umferðum',
     },
+    errors: {
+      team_already_in_season: 'Liðið er þegar í deild á þessu tímabili. Lið getur aðeins verið í einni deild á hverju tímabili.',
+      team_has_encounters: 'Liðið á viðureignir í þessari deild og er því ekki hægt að fjarlægja það úr henni.',
+      division_required: 'Veldu deild fyrir liðið.',
+    },
     crud: {
       add: 'Bæta við',
       newItem: 'Ný færsla',
@@ -374,7 +379,7 @@ export const is = {
       teams: 'Lið',
       players: 'Leikmenn',
       divisions: 'Deildir',
-      addDivision: 'Skrá í deild',
+      addDivision: 'Skrá í deild á öðru tímabili',
       roster: 'Leikmannahópur',
       rosterHint: 'Leikmenn eru skráðir í lið á síðu leikmanns (tímabil, deild, lið).',
       results: 'Viðureignir',

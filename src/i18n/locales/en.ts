@@ -328,6 +328,11 @@ export const en: Translation = {
       noRound: 'No rounds yet.',
       otherConflicts: 'Conflicts in other rounds',
     },
+    errors: {
+      team_already_in_season: 'The team is already in a division this season. A team can only be in one division per season.',
+      team_has_encounters: 'The team has encounters in this division, so it cannot be removed from it.',
+      division_required: 'Choose a division for the team.',
+    },
     crud: {
       add: 'Add',
       newItem: 'New record',
@@ -375,7 +380,7 @@ export const en: Translation = {
       teams: 'Teams',
       players: 'Players',
       divisions: 'Divisions',
-      addDivision: 'Enter in division',
+      addDivision: 'Enter a division for another season',
       roster: 'Roster',
       rosterHint: 'Players are registered to teams on the player page (season, division, team).',
       results: 'Encounters',

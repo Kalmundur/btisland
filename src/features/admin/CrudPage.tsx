@@ -25,7 +25,7 @@ export function CrudPage({ resource }: { resource: ResourceConfig }) {
     const refFields = resource.fields.filter((f) => f.ref);
     const [rows, ...refRows] = await Promise.all([
       listRows(resource.table, resource.order),
-      ...refFields.map((f) => listRows(f.ref!.table, f.ref!.order)),
+      ...refFields.map((f) => listRows(f.ref!.table, f.ref!.order, f.ref!.select)),
     ]);
     const options: Options = {};
     refFields.forEach((f, i) => {
@@ -160,7 +160,7 @@ function RecordForm({
   pkMatch: (row: AdminRow) => AdminRow;
 }) {
   const { t } = useTranslation();
-  const fields = useMemo(() => resource.fields.filter((f) => !f.readOnly), [resource.fields]);
+  const fields = useMemo(() => resource.fields.filter((f) => !f.readOnly && !(row && f.createOnly)), [resource.fields, row]);
   const [values, setValues] = useState<FormValues>(() => initialFormValues(fields, row));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +176,7 @@ function RecordForm({
     try {
       const payload = toRowValues(fields, values);
       if (row) await updateRow(resource.table, pkMatch(row), payload);
+      else if (resource.create) await resource.create(payload);
       else await insertRow(resource.table, payload);
       onSaved();
     } catch (err) {

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 import { useErrorText } from '../../hooks/useErrorText';
+import { rpcErrorKey } from '../../lib/errors';
 
 export function AdminCard({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
   return (
@@ -78,11 +79,14 @@ export function useAdminAction(onDone: () => void) {
 }
 
 export function AdminError({ error }: { error: unknown }) {
+  const { t, i18n } = useTranslation();
   const errorText = useErrorText('match.errors');
   if (!error) return null;
+  // Organizer rules (e.g. one division per season) first, then the shared match messages.
+  const adminKey = `admin.errors.${rpcErrorKey(error)}`;
   return (
     <p className="form-error" role="alert">
-      {errorText(error)}
+      {i18n.exists(adminKey) ? t(adminKey) : errorText(error)}
     </p>
   );
 }

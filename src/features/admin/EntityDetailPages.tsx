@@ -126,7 +126,10 @@ export function TeamDetailPage() {
             return div ? `${str(div.name)} · ${seasonName(div.season_id)}` : '';
           };
           const playerName = (id: unknown) => str(d.players.find((p) => p.id === id)?.full_name);
-          const entered = new Set(d.entries.map((e) => str(e.division_id)));
+          // One division per season: only seasons the team is not in yet can be added.
+          const seasonsEntered = new Set(d.entries.map((e) => str(e.season_id)));
+          const addable = d.divisions.filter((x) => !seasonsEntered.has(str(x.season_id)));
+          const hasEncounters = (divisionId: unknown) => d.encounters.some((enc) => enc.round.divisionId === divisionId);
           return (
             <>
               <div className="admin-page__head">
@@ -147,35 +150,40 @@ export function TeamDetailPage() {
                     {d.entries.map((e) => (
                       <li key={str(e.division_id)} className="admin-link-row">
                         <Link to={`/admin/divisions/${str(e.division_id)}`}>{divisionLabel(e.division_id)}</Link>
-                        <button
-                          type="button"
-                          className="icon-btn icon-btn--danger"
-                          aria-label={t('admin.detail.remove')}
-                          disabled={action.busy}
-                          onClick={() => window.confirm(t('admin.crud.confirmDelete')) && void action.run(() => deleteRow('division_teams', { division_id: e.division_id, team_id: teamId }))}
-                        >
-                          <Trash2 size={16} aria-hidden />
-                        </button>
+                        {/* Removable only until the team has encounters in it (enforced in the database too). */}
+                        {!hasEncounters(e.division_id) && (
+                          <button
+                            type="button"
+                            className="icon-btn icon-btn--danger"
+                            aria-label={t('admin.detail.remove')}
+                            disabled={action.busy}
+                            onClick={() => window.confirm(t('admin.crud.confirmDelete')) && void action.run(() => deleteRow('division_teams', { division_id: e.division_id, team_id: teamId }))}
+                          >
+                            <Trash2 size={16} aria-hidden />
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
                 )}
-                <div className="inline-form">
-                  <AdminSelect
-                    label={t('admin.detail.addDivision')}
-                    value={addDivision}
-                    onChange={setAddDivision}
-                    options={d.divisions.filter((x) => !entered.has(str(x.id))).map((x) => ({ value: str(x.id), label: divisionLabel(x.id) }))}
-                  />
-                  <Button
-                    size="sm"
-                    icon={<Plus size={16} aria-hidden />}
-                    disabled={!addDivision || action.busy}
-                    onClick={() => void action.run(() => insertRow('division_teams', { division_id: addDivision, team_id: teamId })).then(() => setAddDivision(''))}
-                  >
-                    {t('admin.crud.add')}
-                  </Button>
-                </div>
+                {addable.length > 0 && (
+                  <div className="inline-form">
+                    <AdminSelect
+                      label={t('admin.detail.addDivision')}
+                      value={addDivision}
+                      onChange={setAddDivision}
+                      options={addable.map((x) => ({ value: str(x.id), label: divisionLabel(x.id) }))}
+                    />
+                    <Button
+                      size="sm"
+                      icon={<Plus size={16} aria-hidden />}
+                      disabled={!addDivision || action.busy}
+                      onClick={() => void action.run(() => insertRow('division_teams', { division_id: addDivision, team_id: teamId })).then(() => setAddDivision(''))}
+                    >
+                      {t('admin.crud.add')}
+                    </Button>
+                  </div>
+                )}
                 <AdminError error={action.error} />
               </AdminCard>
 
@@ -364,8 +372,11 @@ export function DivisionDetailPage() {
       listRowsWhere('rounds', { division_id: divisionId }, [{ column: 'number' }]),
     ]);
     if (!divisions[0]) return null;
-    const seasons = await listRowsWhere('seasons', { id: str(divisions[0].season_id) });
-    return { division: divisions[0], season: seasons[0] ?? null, entries, teams, rounds };
+    const [seasons, seasonEntries] = await Promise.all([
+      listRowsWhere('seasons', { id: str(divisions[0].season_id) }),
+      listRowsWhere('division_teams', { season_id: str(divisions[0].season_id) }),
+    ]);
+    return { division: divisions[0], season: seasons[0] ?? null, entries, seasonEntries, teams, rounds };
   }, [divisionId]);
   const [addTeam, setAddTeam] = useState('');
   const action = useAdminAction(data.reload);
@@ -377,7 +388,9 @@ export function DivisionDetailPage() {
       <AsyncBoundary state={data}>
         {(d) => {
           if (!d) return <EmptyState>{t('live.notFound')}</EmptyState>;
-          const entered = new Set(d.entries.map((e) => str(e.team_id)));
+          // One division per season: teams already in any division this season are not offered.
+          const inSeason = new Set(d.seasonEntries.map((e) => str(e.team_id)));
+          const addable = d.teams.filter((x) => !inSeason.has(str(x.id)) && x.is_active !== false);
           return (
             <>
               <div className="admin-page__head">
@@ -412,22 +425,24 @@ export function DivisionDetailPage() {
                       ))}
                   </ul>
                 )}
-                <div className="inline-form">
-                  <AdminSelect
-                    label={t('admin.detail.addTeam')}
-                    value={addTeam}
-                    onChange={setAddTeam}
-                    options={d.teams.filter((x) => !entered.has(str(x.id)) && x.is_active !== false).map((x) => ({ value: str(x.id), label: str(x.name) }))}
-                  />
-                  <Button
-                    size="sm"
-                    icon={<Plus size={16} aria-hidden />}
-                    disabled={!addTeam || action.busy}
-                    onClick={() => void action.run(() => insertRow('division_teams', { division_id: divisionId, team_id: addTeam })).then(() => setAddTeam(''))}
-                  >
-                    {t('admin.crud.add')}
-                  </Button>
-                </div>
+                {addable.length > 0 && (
+                  <div className="inline-form">
+                    <AdminSelect
+                      label={t('admin.detail.addTeam')}
+                      value={addTeam}
+                      onChange={setAddTeam}
+                      options={addable.map((x) => ({ value: str(x.id), label: str(x.name) }))}
+                    />
+                    <Button
+                      size="sm"
+                      icon={<Plus size={16} aria-hidden />}
+                      disabled={!addTeam || action.busy}
+                      onClick={() => void action.run(() => insertRow('division_teams', { division_id: divisionId, team_id: addTeam })).then(() => setAddTeam(''))}
+                    >
+                      {t('admin.crud.add')}
+                    </Button>
+                  </div>
+                )}
                 <AdminError error={action.error} />
               </AdminCard>
 
