@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { EncounterDetail, EncounterStatus } from '../domain/types';
-import { SLOT_LETTERS } from '../domain/lineup';
 import { formatDate, formatShortDate, formatTime } from '../lib/format';
 
 export function StatusBadge({ status }: { status: EncounterStatus }) {
@@ -87,24 +86,24 @@ export function EncounterHeader({
   const e = encounter;
   const shown = score ?? (hasScore(e) ? { home: e.homeScore!, away: e.awayScore! } : null);
   const time = formatTime(e.round.startTime);
-  const side = (name: string, teamId: string, letters: readonly string[]) => (
+  const side = (name: string, teamId: string) => (
     <Link
       to={`/team/${teamId}`}
       className={`match-head__team${highlightTeamId === teamId ? ' match-head__team--mine' : ''}`}
     >
-      <span className="match-head__name">{name}</span>
-      <span className="match-head__letters">{letters.join(' ')}</span>
+      {name}
     </Link>
   );
 
   return (
     <div className="match-head">
-      <div className="match-head__meta">
-        <span className="match-head__round">{t('round.label', { number: e.round.number })}</span>
-        <StatusBadge status={e.status} />
-      </div>
+      <p className="match-head__meta">
+        {t('round.label', { number: e.round.number })}
+        {' · '}
+        <span className={`match-head__status match-head__status--${e.status}`}>{t(`status.${e.status}`)}</span>
+      </p>
       <div className="match-head__teams">
-        {side(e.homeTeamName, e.homeTeamId, SLOT_LETTERS.home)}
+        {side(e.homeTeamName, e.homeTeamId)}
         <span className="match-head__score num">
           {shown ? (
             <>
@@ -116,7 +115,7 @@ export function EncounterHeader({
             <span className="match-head__vs">{t('common.vs')}</span>
           )}
         </span>
-        {side(e.awayTeamName, e.awayTeamId, SLOT_LETTERS.away)}
+        {side(e.awayTeamName, e.awayTeamId)}
       </div>
       {note && <p className="match-head__note">{note}</p>}
       <p className="match-head__where">

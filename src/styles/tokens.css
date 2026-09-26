@@ -63,11 +63,12 @@
   --text-xl: 22px;
   --text-2xl: 28px;
   --text-score: 40px;
+  --text-display: 48px;
 
   /* Layout */
   --content-max: 600px;
   --header-height: 52px;
-  --nav-height: 58px;
+  --nav-height: 56px;
   --admin-sidebar: 240px;
 
   /* Safe areas (iPhone notch / home indicator, Capacitor) */

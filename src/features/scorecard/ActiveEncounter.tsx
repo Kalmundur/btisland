@@ -213,7 +213,7 @@ function EncounterFlow({
             />
           )}
           {state.doublesSelectionOpen && !encounter.doublesRevealedAt && !official && doublesPanel}
-          <Section title={official || state.finished ? t('result.report') : t('match.pickMatch')}>
+          <Section className="section--plain" title={official || state.finished ? t('result.report') : t('match.pickMatch')}>
             <MatchList
               state={state}
               data={{ ...data, names }}

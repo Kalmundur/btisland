@@ -153,7 +153,7 @@ export const en: Translation = {
     hideOthers: 'Hide',
     inConfirmation: 'Game being confirmed',
     notPlayed: 'Not played',
-    pickMatch: 'Choose a match to score',
+    pickMatch: 'Matches',
     scorers: '{{count}} entered',
     status: {
       available: 'Open',

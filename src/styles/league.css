@@ -327,6 +327,8 @@
 .bottom-nav__icon {
   position: relative;
   display: inline-flex;
+  width: 24px;
+  height: 24px;
 }
 
 .bottom-nav__badge {

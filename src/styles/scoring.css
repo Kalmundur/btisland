@@ -56,9 +56,9 @@
 
 .match-head__note {
   text-align: center;
-  font-weight: 800;
-  font-size: var(--text-md);
-  color: var(--accent-strong);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text);
 }
 
 /* Rejected score entries (base .banner lives in components.css) ------------------ */
@@ -115,18 +115,21 @@
 }
 
 /* Match list -------------------------------------------------------------------- */
+/* Player names carry the row; number, position letters and state are quiet. States differ
+   by shape as well as colour: check (done), chevron (can open), warning icon (conflict),
+   text label (in progress / not played), muted names without chevron (waiting). */
 .match-row__inner {
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 20px 1fr auto;
   align-items: center;
   gap: var(--space-3);
-  min-height: 60px;
+  min-height: 56px;
   padding: var(--space-2) 0;
   color: inherit;
 }
 
 .match-row__inner--link {
-  grid-template-columns: 22px 1fr auto 16px;
+  grid-template-columns: 20px 1fr auto 16px;
 }
 
 .match-row__inner--link:active {
@@ -134,7 +137,8 @@
 }
 
 .match-row__no {
-  font-weight: 800;
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--text-faint);
   text-align: right;
 }
@@ -142,7 +146,7 @@
 .match-row__players {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
@@ -150,22 +154,29 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
+  font-size: var(--text-md);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text);
   min-width: 0;
 }
 
-.match-row__player--won {
+/* Finished match: the winner stays strong, the loser steps back. */
+.match-row--completed .match-row__player {
+  color: var(--text-muted);
+}
+
+.match-row--completed .match-row__player--won {
   color: var(--text);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .match-row__letter {
   flex-shrink: 0;
-  width: 14px;
-  font-weight: 900;
-  color: var(--accent);
+  width: 12px;
   font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-faint);
 }
 
 .match-row__name {
@@ -176,18 +187,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px var(--space-2);
-  padding-left: 22px;
+  padding-left: 20px;
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
 .match-row__game--pending {
   color: var(--warning);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .match-row__note {
-  padding-left: 22px;
+  padding-left: 20px;
   font-size: var(--text-xs);
   color: var(--warning);
   font-weight: 600;
@@ -200,13 +211,27 @@
   gap: 2px;
 }
 
+.match-row--completed .match-row__result {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
 .match-row__score {
-  font-size: var(--text-lg);
-  font-weight: 900;
+  font-size: var(--text-md);
+  font-weight: 700;
 }
 
 .match-row__score--live {
   color: var(--accent);
+}
+
+.match-row--conflict .match-row__score {
+  color: var(--text);
+}
+
+.match-row__done {
+  color: var(--text-faint);
 }
 
 .match-row__status {
@@ -214,23 +239,25 @@
   align-items: center;
   gap: 3px;
   font-size: var(--text-xs);
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
-}
-
-.match-row__status--available {
-  color: var(--accent);
+  color: var(--text-muted);
 }
 
 .match-row__status--in_progress {
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
 .match-row__status--conflict {
   color: var(--warning);
 }
 
-/* Only matches that will never be played are dimmed; upcoming ones read as a schedule. */
+/* Waiting for an earlier phase: a schedule line, muted, not tappable. */
+.match-row--locked .match-row__player {
+  color: var(--text-muted);
+}
+
+/* Will never be played: dimmed further and labelled. */
 .match-row--not_played .match-row__players {
   opacity: 0.55;
 }
@@ -242,13 +269,12 @@
 .match-group__title {
   margin: 0 0 var(--space-1);
   font-size: var(--text-sm);
-  font-weight: 800;
-  color: var(--text);
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .match-group__note {
-  font-weight: 500;
-  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .match-row__pending {
@@ -257,7 +283,11 @@
 }
 
 .match-row__chevron {
-  color: var(--text-faint);
+  color: var(--text-muted);
+}
+
+.match-row--completed .match-row__chevron {
+  color: var(--border-strong);
 }
 
 /* Selections (lineup / doubles) ---------------------------------------------------- */

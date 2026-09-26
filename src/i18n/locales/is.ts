@@ -152,7 +152,7 @@ export const is = {
     hideOthers: 'Fela',
     inConfirmation: 'Lota í staðfestingu',
     notPlayed: 'Ekki leikinn',
-    pickMatch: 'Veldu leik til að skrá',
+    pickMatch: 'Leikir',
     scorers: '{{count}} skráð',
     status: {
       available: 'Laus',

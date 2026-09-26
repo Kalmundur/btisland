@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { matchPhaseGroups, type EncounterState, type MatchState } from '../domain/encounterState';
 import { matchParticipants, type EncounterData } from '../hooks/useEncounterData';
 
@@ -137,7 +137,7 @@ function MatchRow({
             {m.homeGames}–{m.awayGames}
           </span>
         ) : null}
-        <StatusMark status={m.status} publicView={publicView} />
+        <StatusMark status={m.status} publicView={publicView} linked={!!to} />
       </span>
       {to && <ChevronRight size={16} className="match-row__chevron" aria-hidden />}
       {expandable && <ChevronDown size={16} className={`match-row__chevron${open ? ' match-row__chevron--open' : ''}`} aria-hidden />}
@@ -161,10 +161,17 @@ function MatchRow({
   );
 }
 
-/** Status text for open/finished matches. Waiting matches get none – their heading explains it. */
-function StatusMark({ status, publicView }: { status: MatchState['status']; publicView: boolean }) {
+/**
+ * Status mark for open/finished matches. Waiting matches get none – their heading explains it.
+ * A tappable open match needs no label: its chevron already says it can be opened.
+ */
+function StatusMark({ status, publicView, linked }: { status: MatchState['status']; publicView: boolean; linked: boolean }) {
   const { t } = useTranslation();
-  if (status === 'completed' || status === 'not_played' || status === 'locked') return null;
+  if (status === 'completed') {
+    return <Check size={14} strokeWidth={2.5} className="match-row__done" aria-label={t('match.status.completed')} />;
+  }
+  if (status === 'not_played' || status === 'locked') return null;
+  if (status === 'available' && linked) return null;
   if (status === 'conflict' && publicView) {
     return <span className="match-row__status match-row__status--in_progress">{t('match.status.in_progress')}</span>;
   }

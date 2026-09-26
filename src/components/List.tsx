@@ -2,9 +2,19 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight } from 'lucide-react';
 
-export function Section({ title, action, children }: { title?: ReactNode; action?: ReactNode; children: ReactNode }) {
+export function Section({
+  title,
+  action,
+  className,
+  children,
+}: {
+  title?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <section className="section">
+    <section className={className ? `section ${className}` : 'section'}>
       {(title || action) && (
         <div className="section__head">
           {title && <h2 className="section__title">{title}</h2>}
