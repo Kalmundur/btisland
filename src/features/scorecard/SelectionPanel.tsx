@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, CheckCircle2, Lock } from 'lucide-react';
 import { Button } from '../../components/Button';
-import { selectionProgress } from '../../domain/confirmation';
+import { LINEUP_CONFIRMATIONS, selectionProgress } from '../../domain/confirmation';
 import { useErrorText } from '../../hooks/useErrorText';
 import type { PlayerListItem, TeamSelection } from '../../domain/types';
 
 /**
- * Own-team selection with two-person confirmation – used for the singles lineup (A/B/C or
- * X/Y/Z) and the doubles pair (1/2). Proposing/editing = confirmation #1 of a new version;
- * a different teammate confirms the exact version to lock it.
+ * Own-team selection – used for the singles lineup (A/B/C or X/Y/Z, two-person confirmation)
+ * and the doubles pair (1/2, locked on submit). Proposing/editing = confirmation #1 of a new
+ * version; when more are required, a different teammate confirms the exact version to lock it.
  */
 export function SelectionPanel({
   title,
@@ -23,6 +23,7 @@ export function SelectionPanel({
   validate,
   onPropose,
   onConfirm,
+  requiredConfirmations = LINEUP_CONFIRMATIONS,
 }: {
   title: string;
   slots: readonly string[];
@@ -36,10 +37,11 @@ export function SelectionPanel({
   validate: (draft: Record<string, string | undefined>) => string | null;
   onPropose: (draft: Record<string, string>) => Promise<void>;
   onConfirm: (version: number) => Promise<void>;
+  requiredConfirmations?: number;
 }) {
   const { t } = useTranslation();
   const errorText = useErrorText('selection.errors');
-  const progress = selectionProgress(selection, myPlayerId);
+  const progress = selectionProgress(selection, myPlayerId, requiredConfirmations);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string | undefined>>({});
   const [busy, setBusy] = useState(false);
@@ -87,7 +89,7 @@ export function SelectionPanel({
                 <Lock size={12} aria-hidden /> {lockedLabel}
               </>
             ) : (
-              t('selection.progress', { count: progress.count })
+              t('selection.progress', { count: progress.count, required: requiredConfirmations })
             )}
           </span>
         )}
@@ -184,20 +186,22 @@ export function OpponentSelectionStatus({
   missingLabel,
   lockedLabel,
   hiddenNote,
+  requiredConfirmations = LINEUP_CONFIRMATIONS,
 }: {
   label: string;
   selection: TeamSelection | undefined;
   missingLabel: string;
   lockedLabel: string;
   hiddenNote: string;
+  requiredConfirmations?: number;
 }) {
   const { t } = useTranslation();
-  const progress = selectionProgress(selection, null);
+  const progress = selectionProgress(selection, null, requiredConfirmations);
   const text =
     progress.stage === 'locked'
       ? lockedLabel
       : progress.stage === 'pending'
-        ? t('selection.opponentProgress', { count: progress.count })
+        ? t('selection.opponentProgress', { count: progress.count, required: requiredConfirmations })
         : missingLabel;
   return (
     <div className="opponent-status">

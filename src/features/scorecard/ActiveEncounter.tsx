@@ -17,6 +17,7 @@ import { confirmDoubles, confirmLineup, proposeDoubles, proposeLineup } from '..
 import { slotsForSide, validateDoubles, validateLineup } from '../../domain/lineup';
 import type { LineupSlotLetter, PlayerListItem, RoundSession, TeamSide } from '../../domain/types';
 import { OpponentSelectionStatus, SelectionPanel } from './SelectionPanel';
+import { DOUBLES_CONFIRMATIONS } from '../../domain/confirmation';
 import { ScoreEntry } from './ScoreEntry';
 import { ResultPanel, useOutcomeText } from './ResultPanel';
 
@@ -165,6 +166,7 @@ function EncounterFlow({
         myPlayerId={session.playerId}
         names={names}
         lockedLabel={t('selection.doublesLocked')}
+        requiredConfirmations={DOUBLES_CONFIRMATIONS}
         validate={(draft) => validateDoubles([draft['1'], draft['2']], rosterIds)}
         onPropose={async (draft) => {
           await proposeDoubles(encounter.id, draft['1'], draft['2']);
@@ -181,6 +183,7 @@ function EncounterFlow({
         missingLabel={t('selection.doublesMissing')}
         lockedLabel={t('selection.doublesLocked')}
         hiddenNote={t('selection.doublesHidden')}
+        requiredConfirmations={DOUBLES_CONFIRMATIONS}
       />
     </Section>
   );

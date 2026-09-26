@@ -153,7 +153,7 @@ If more than one encounter matches, it returns the choices instead of guessing. 
 
 **Phases.** Matches 1–6 unlock when both lineups are revealed and can be scored concurrently on two tables. Doubles (7) unlock once 1–6 all have reconciled winners and both pairs are revealed. Matches 8–10 unlock once 7 is complete.
 
-**Lineups and doubles.** A team proposes a selection. The proposer is confirmation 1, and a *different* player from the same team confirms the exact version. Editing before lock creates a new version, so older confirmations stop counting. Opponents and the public only see the status ("1 af 2", "staðfest") until both teams are locked; then both are revealed together. After the lock, only an organizer can unlock a selection (audited).
+**Lineups and doubles.** A team proposes a selection. For the singles lineup the proposer is confirmation 1, and a *different* player from the same team confirms the exact version. A doubles pair needs only one confirmation: it locks as soon as it is submitted. Editing before lock creates a new version, so older confirmations stop counting. Opponents and the public only see the status ("1 af 2", "staðfest") until both teams are locked; then both are revealed together. After the lock, only an organizer can unlock a selection (audited).
 
 **Scoring.** Any joined player from either team may score any unlocked match. Every scorer has their own row per game in `set_entries` (never overwritten by someone else). Each row is keyed by an idempotent `client_entry_id`, so retries are safe.
 

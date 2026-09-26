@@ -3,7 +3,7 @@ import { gameWinner, isValidGameScore, matchProgress } from './tableTennis';
 import { MATCH_FORMAT } from './matchFormat';
 import { reconcileGame } from './reconcile';
 import { deriveEncounter } from './encounterState';
-import { currentConfirmers, resultConfirmationState, selectionProgress } from './confirmation';
+import { DOUBLES_CONFIRMATIONS, currentConfirmers, resultConfirmationState, selectionProgress } from './confirmation';
 import { validateDoubles, validateLineup } from './lineup';
 import { scorerView } from './scorer';
 import type { ReconciledGame, ResultConfirmation, TeamSelection, TeamSide } from './types';
@@ -197,6 +197,12 @@ describe('lineup and doubles selection', () => {
     expect(selectionProgress(one, 'p2')).toMatchObject({ canConfirm: true });
     const two = sel({ confirmations: [{ playerId: 'p1', version: 1 }, { playerId: 'p2', version: 1 }] });
     expect(selectionProgress(two, 'p3')).toMatchObject({ stage: 'locked', count: 2, canConfirm: false });
+  });
+
+  it('doubles pair: the submitter alone locks it', () => {
+    const submitted = sel({ confirmations: [{ playerId: 'p1', version: 1 }] });
+    expect(selectionProgress(submitted, 'p2', DOUBLES_CONFIRMATIONS)).toMatchObject({ stage: 'locked', count: 1, canConfirm: false });
+    expect(selectionProgress(sel({ confirmedCount: 1 }), null, DOUBLES_CONFIRMATIONS).stage).toBe('locked');
   });
 
   it('a new version invalidates earlier confirmations', () => {

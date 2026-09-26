@@ -62,14 +62,9 @@ async function lockLineups(c: Ctx) {
 }
 
 async function lockDoubles(c: Ctx) {
-  const home = await c.h1.rpc<{ selection_id: string; version: number }>('propose_doubles', {
-    p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Hugo,
-  });
-  await c.h2.rpc('confirm_doubles', { p_selection_id: home.selection_id, p_version: home.version });
-  const away = await c.a1.rpc<{ selection_id: string; version: number }>('propose_doubles', {
-    p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Lúkas,
-  });
-  await c.a3.rpc('confirm_doubles', { p_selection_id: away.selection_id, p_version: away.version });
+  // A submitted pair is locked immediately (one confirmation).
+  await c.h1.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Hugo });
+  await c.a1.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Lúkas });
 }
 
 const score = (d: Device, enc: string, match: number, game: number, home: number, away: number, clientId = randomUUID()) =>
@@ -264,26 +259,20 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
 
     expect(await err(c.h1.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Isak })))
       .toContain('duplicate_player');
+    // One confirmation is enough for doubles: the submitter's proposal locks the pair at once.
     const home = await c.h1.rpc<{ selection_id: string; version: number }>('propose_doubles', {
       p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Hugo,
     });
-    // Same person cannot confirm twice; opponent cannot see the pair.
-    expect(await c.h1.rpc('confirm_doubles', { p_selection_id: home.selection_id, p_version: 1 })).toMatchObject({ confirmed_count: 1, locked: false });
-    await c.h2.rpc('confirm_doubles', { p_selection_id: home.selection_id, p_version: 1 });
+    expect(home).toMatchObject({ version: 1, confirmed_count: 1, locked: true });
+    expect(await c.h2.rpc('confirm_doubles', { p_selection_id: home.selection_id, p_version: 1 })).toMatchObject({ locked: true });
+    expect(await err(c.h2.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Stefán })))
+      .toContain('doubles_locked');
+    // Opponent cannot see the pair until both teams have submitted.
     expect(await c.a1.select('select * from public.doubles_players')).toHaveLength(0);
+    expect((await games(c))[6].status).toBe('locked');
 
-    const away = await c.a1.rpc<{ selection_id: string; version: number }>('propose_doubles', {
-      p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Eiríkur,
-    });
-    // Edit before lock -> new version, old confirmations reset.
-    const edited = await c.a2.rpc<{ version: number; confirmed_count: number }>('propose_doubles', {
-      p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Lúkas,
-    });
-    expect(edited).toMatchObject({ version: 2, confirmed_count: 1 });
-    expect(await err(c.a3.rpc('confirm_doubles', { p_selection_id: away.selection_id, p_version: 1 }))).toContain('doubles_changed');
-    await c.a3.rpc('confirm_doubles', { p_selection_id: away.selection_id, p_version: 2 });
-
-    expect(await c.t.as(null, () => c.t.query('select * from public.doubles_players'))).toHaveLength(4);
+    await c.a1.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Eiríkur });
+    expect(await c.a1.select('select * from public.doubles_players')).toHaveLength(4);
     rows = await games(c);
     expect(rows[6].status).toBe('available');
     expect(rows.slice(7).every((r) => r.status === 'locked')).toBe(true);

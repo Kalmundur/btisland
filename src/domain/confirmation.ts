@@ -1,7 +1,9 @@
 import type { ResultConfirmation, TeamSelection, TeamSide, UUID } from './types';
 
-/** Two DIFFERENT players from the same team must confirm the same version. */
-export const REQUIRED_CONFIRMATIONS = 2;
+/** Singles lineup: two DIFFERENT players from the same team must confirm the same version. */
+export const LINEUP_CONFIRMATIONS = 2;
+/** Doubles pair: the submitting player's confirmation is enough (locks on submit). */
+export const DOUBLES_CONFIRMATIONS = 1;
 
 export type SelectionStage = 'missing' | 'pending' | 'locked';
 
@@ -22,15 +24,19 @@ export function currentConfirmers(selection: Pick<TeamSelection, 'version' | 'co
  * Progress for display. Uses the server's confirmedCount when the confirmation rows are
  * hidden (opponent before reveal), otherwise counts distinct current-version confirmers.
  */
-export function selectionProgress(selection: TeamSelection | undefined, myPlayerId: UUID | null): SelectionProgress {
+export function selectionProgress(
+  selection: TeamSelection | undefined,
+  myPlayerId: UUID | null,
+  required: number = LINEUP_CONFIRMATIONS,
+): SelectionProgress {
   if (!selection) return { stage: 'missing', count: 0, iConfirmed: false, canConfirm: false };
   const confirmers = currentConfirmers(selection);
   const count = selection.confirmations.length > 0 ? confirmers.length : selection.confirmedCount;
-  const locked = selection.lockedAt !== null || count >= REQUIRED_CONFIRMATIONS;
+  const locked = selection.lockedAt !== null || count >= required;
   const iConfirmed = !!myPlayerId && confirmers.includes(myPlayerId);
   return {
     stage: locked ? 'locked' : 'pending',
-    count: Math.min(count, REQUIRED_CONFIRMATIONS),
+    count: Math.min(count, required),
     iConfirmed,
     canConfirm: !locked && !iConfirmed && !!myPlayerId,
   };
