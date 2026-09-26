@@ -94,7 +94,7 @@ export const en: Translation = {
     legend: 'P: Played · W-D-L: Won · Drawn · Lost',
   },
   players: {
-    rankingNote: 'Singles in officially confirmed encounters only. Order: most wins, then fewest losses.',
+    rankingNote: 'Singles in officially confirmed encounters only. Ranking: wins → losses → set differential → point differential.',
     title: 'Players',
     top: 'Top 10',
     colRecord: 'W–L',

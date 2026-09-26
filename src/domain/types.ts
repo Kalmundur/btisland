@@ -254,10 +254,26 @@ export interface StandingRow {
 }
 
 export interface PlayerRankingRow {
+  /** First position occupied by this row's tie group (= the rank when not tied). */
   position: number;
+  /** Last position occupied by the tie group (equal to `position` when not tied). */
+  positionEnd: number;
   tied: boolean;
   playerId: UUID;
   /** Singles only. */
   won: number;
   lost: number;
+  setsWon: number;
+  setsLost: number;
+  pointsWon: number;
+  pointsLost: number;
+}
+
+/** Agreed points of one game ("lota") – used for singles point differential. */
+export interface GameScore {
+  encounterId: UUID;
+  matchNumber: number;
+  gameNumber: number;
+  homePoints: number;
+  awayPoints: number;
 }

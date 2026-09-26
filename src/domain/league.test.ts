@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { computeStandings } from './standings';
 import { compareRatio } from './ratio';
-import { playerSummary, rankSinglesPlayers, type GameWithContext } from './playerStats';
+import { formatRankPosition, playerSummary, rankSinglesPlayers, type GameWithContext } from './playerStats';
 import { deriveRoundStatus, focusRound, liveOverview } from './rounds';
-import type { Encounter, EncounterGame, EncounterStatus, Round } from './types';
+import type { Encounter, EncounterGame, EncounterStatus, GameScore, Round } from './types';
 
 // --- fixtures -----------------------------------------------------------------------------
 const teams = [
@@ -206,6 +206,126 @@ describe('Top 10 singles ranking', () => {
     const games = Array.from({ length: 12 }, (_, i) => single('e1', i + 1, `p${i}`, `q${i}`, 'home'));
     const rows = rankSinglesPlayers(games, new Set(['e1']), nameOf, 10);
     expect(rows).toHaveLength(12); // all 12 winners share rank 1
+  });
+});
+
+describe('Top 10 tiebreakers and shared ranges', () => {
+  // A singles match with explicit game scores (home points first); winner derived from the games.
+  let seq = 0;
+  const games: EncounterGame[] = [];
+  const scores: GameScore[] = [];
+  const match = (home: string, away: string, sets: Array<[number, number]>, kind: 'singles' | 'doubles' = 'singles') => {
+    const n = ++seq;
+    const homeGames = sets.filter(([h, a]) => h > a).length;
+    const awayGames = sets.length - homeGames;
+    games.push({
+      id: `g${n}`, encounterId: 'e1', matchNumber: n, kind, status: 'completed',
+      homePlayerIds: [home], awayPlayerIds: [away], homeGames, awayGames, winner: homeGames === 3 ? 'home' : 'away',
+    });
+    sets.forEach(([h, a], i) => scores.push({ encounterId: 'e1', matchNumber: n, gameNumber: i + 1, homePoints: h, awayPoints: a }));
+  };
+  const reset = () => {
+    seq = 0;
+    games.length = 0;
+    scores.length = 0;
+  };
+  const rank = () => rankSinglesPlayers(games, new Set(['e1']), (id) => id, 10, scores);
+  const view = () => rank().filter((r) => !r.playerId.startsWith('opp')).map((r) => [formatRankPosition(r), r.playerId]);
+  const W: Array<[number, number]> = [[11, 5], [11, 5], [11, 5]]; // 3–0, +18
+  const L: Array<[number, number]> = [[5, 11], [5, 11], [5, 11]];
+
+  it('same wins: fewer losses ranks higher', () => {
+    reset();
+    match('a', 'opp1', W);
+    match('a', 'opp2', W);
+    match('b', 'opp3', W);
+    match('b', 'opp4', W);
+    match('b', 'opp5', L);
+    expect(view()).toEqual([['1', 'a'], ['2', 'b']]);
+  });
+
+  it('same W–L: better set differential ranks higher', () => {
+    reset();
+    match('a', 'opp1', W); // 3–0
+    match('b', 'opp2', [[11, 5], [5, 11], [11, 5], [11, 5]]); // 3–1
+    expect(view()).toEqual([['1', 'a'], ['2', 'b']]);
+  });
+
+  it('same W–L and set differential: better point differential ranks higher', () => {
+    reset();
+    match('a', 'opp1', [[11, 9], [11, 9], [11, 9]]); // +6
+    match('b', 'opp2', [[11, 2], [11, 2], [11, 2]]); // +27
+    expect(view()).toEqual([['1', 'b'], ['2', 'a']]);
+  });
+
+  it('the example: Lúkas 6–0, then Birgir (sets), Kristján and Magnús (points)', () => {
+    reset();
+    for (let i = 0; i < 6; i++) match('Lúkas', `opp-l${i}`, W);
+    // Birgir 4–0, sets 12–2
+    match('Birgir', 'opp-b1', [[11, 3], [3, 11], [11, 3], [11, 3]]);
+    match('Birgir', 'opp-b2', [[11, 3], [3, 11], [11, 3], [11, 3]]);
+    match('Birgir', 'opp-b3', [[11, 3], [11, 3], [11, 3]]);
+    match('Birgir', 'opp-b4', [[11, 3], [11, 3], [11, 3]]);
+    // Kristján and Magnús 4–0, sets 12–3 each; Kristján has more points
+    for (const [p, win] of [['Kristján', 2], ['Magnús', 6]] as const) {
+      match(p, `opp-${p}1`, [[11, win], [win, 11], [11, win], [11, win]]);
+      match(p, `opp-${p}2`, [[11, win], [win, 11], [11, win], [11, win]]);
+      match(p, `opp-${p}3`, [[11, win], [win, 11], [11, win], [11, win]]);
+      match(p, `opp-${p}4`, [[11, win], [11, win], [11, win]]);
+    }
+    const rows = rank().filter((r) => !r.playerId.startsWith('opp'));
+    expect(rows.map((r) => [formatRankPosition(r), r.playerId, `${r.won}–${r.lost}`])).toEqual([
+      ['1', 'Lúkas', '6–0'],
+      ['2', 'Birgir', '4–0'],
+      ['3', 'Kristján', '4–0'],
+      ['4', 'Magnús', '4–0'],
+    ]);
+    expect(rows.map((r) => `${r.setsWon}–${r.setsLost}`)).toEqual(['18–0', '12–2', '12–3', '12–3']);
+  });
+
+  it('a complete tie between two players shares the range; the next player continues', () => {
+    reset();
+    match('a', 'opp1', W);
+    match('a', 'opp2', W);
+    match('b', 'opp3', W);
+    match('c', 'opp4', W);
+    match('d', 'opp5', [[11, 9], [11, 9], [11, 9]]);
+    expect(view()).toEqual([['1', 'a'], ['2–3', 'b'], ['2–3', 'c'], ['4', 'd']]);
+  });
+
+  it('a complete tie between 3+ players shows 2–4 for each, and the next rank is 5', () => {
+    reset();
+    match('A', 'opp1', W);
+    match('A', 'opp2', W);
+    for (const p of ['D', 'B', 'C']) match(p, `opp-${p}`, W);
+    match('E', 'opp6', [[11, 9], [11, 9], [11, 9]]);
+    expect(view()).toEqual([['1', 'A'], ['2–4', 'B'], ['2–4', 'C'], ['2–4', 'D'], ['5', 'E']]);
+    const tied = rank().filter((r) => ['B', 'C', 'D'].includes(r.playerId));
+    expect(tied.every((r) => r.tied && r.position === 2 && r.positionEnd === 4)).toBe(true);
+  });
+
+  it('uses an en dash and plain numbers for single positions', () => {
+    expect(formatRankPosition({ position: 2, positionEnd: 4 })).toBe('2–4');
+    expect(formatRankPosition({ position: 3, positionEnd: 3 })).toBe('3');
+  });
+
+  it('doubles never affect wins, sets or points', () => {
+    reset();
+    match('a', 'opp1', W);
+    match('b', 'opp2', W);
+    match('b', 'a', [[11, 0], [11, 0], [11, 0]], 'doubles');
+    const rows = rank();
+    const a = rows.find((r) => r.playerId === 'a')!;
+    const b = rows.find((r) => r.playerId === 'b')!;
+    expect([a.won, a.lost, a.setsWon, a.setsLost, a.pointsWon, a.pointsLost]).toEqual([1, 0, 3, 0, 33, 15]);
+    expect([formatRankPosition(a), formatRankPosition(b)]).toEqual(['1–2', '1–2']);
+  });
+
+  it('games recorded after the deciding game never count', () => {
+    reset();
+    match('a', 'opp1', W);
+    scores.push({ encounterId: 'e1', matchNumber: 1, gameNumber: 4, homePoints: 0, awayPoints: 11 });
+    expect(rank().find((r) => r.playerId === 'a')).toMatchObject({ pointsWon: 33, pointsLost: 15 });
   });
 });
 

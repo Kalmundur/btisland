@@ -200,6 +200,13 @@
 .ranking__pos {
   color: var(--text-muted);
   text-align: right;
+  white-space: nowrap;
+}
+
+/* Shared positions ("2–4") need a wider rank column; plain ranks keep the 28px column. */
+.ranking--ranges .ranking__row,
+.ranking--ranges .ranking__header {
+  grid-template-columns: 3.25em 1fr auto;
 }
 
 .ranking__who {

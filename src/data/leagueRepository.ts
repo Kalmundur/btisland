@@ -4,6 +4,7 @@ import type {
   Club,
   EncounterDetail,
   EncounterGame,
+  GameScore,
   LeagueContext,
   PlayerListItem,
   Round,
@@ -249,6 +250,27 @@ export async function listPlayerGames(playerId: UUID): Promise<GameWithContext[]
     homeTeamName: r.encounter.home_team?.name ?? '',
     awayTeamName: r.encounter.away_team?.name ?? '',
   }));
+}
+
+/** Agreed game points of the given encounters (public reconciled state), for point differentials. */
+export async function listGameScores(encounterIds: readonly UUID[]): Promise<GameScore[]> {
+  if (encounterIds.length === 0) return [];
+  const rows = unwrap(
+    await db()
+      .from('reconciled_set_states')
+      .select('encounter_id, match_number, game_number, home_points, away_points')
+      .eq('status', 'agreed')
+      .in('encounter_id', [...encounterIds]),
+  ) as Array<{ encounter_id: string; match_number: number; game_number: number; home_points: number | null; away_points: number | null }>;
+  return rows
+    .filter((r) => r.home_points !== null && r.away_points !== null)
+    .map((r) => ({
+      encounterId: r.encounter_id,
+      matchNumber: r.match_number,
+      gameNumber: r.game_number,
+      homePoints: r.home_points as number,
+      awayPoints: r.away_points as number,
+    }));
 }
 
 /** Number of conflicted games per encounter (public: no scorer details). */

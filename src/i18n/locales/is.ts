@@ -93,7 +93,7 @@ export const is = {
     legend: 'L: Leikir · S-J-T: Sigrar · Jafntefli · Töp',
   },
   players: {
-    rankingNote: 'Aðeins einliðaleikir í staðfestum viðureignum. Röðun: flestir sigrar, síðan fæst töp.',
+    rankingNote: 'Aðeins einliðaleikir í staðfestum viðureignum. Röðun: sigrar → töp → lotumunur → stigamunur.',
     title: 'Leikmenn',
     top: 'Topp 10',
     colRecord: 'S–T',
