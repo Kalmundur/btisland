@@ -349,6 +349,13 @@
   color: var(--accent);
 }
 
+/* Own lineup (Leikskýrsla): the position is a secondary label, the name leads. */
+.selection__list .selection__letter,
+.selection__editor .selection__letter {
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .selection__list {
   list-style: none;
   margin: 0;

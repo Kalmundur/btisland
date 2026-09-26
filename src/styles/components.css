@@ -787,6 +787,50 @@
   color: var(--text-muted);
 }
 
+/* Compact variant (Leikskýrsla before play): who / when / where, left-aligned with the
+   content below. The matchup is the strongest line; the rest is quiet metadata. */
+.match-head--compact {
+  align-items: stretch;
+  text-align: left;
+}
+
+.match-head__matchup {
+  margin: 0 0 6px;
+  font-size: clamp(24px, 6.8vw, 28px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+
+.match-head__matchup .match-head__team {
+  font-size: inherit;
+  text-align: left;
+}
+
+.match-head__sep {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+.match-head__when,
+.match-head__venue {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.match-head__venue {
+  margin-top: 2px;
+  color: var(--text-faint);
+}
+
+.match-head--compact .match-head__note {
+  margin: var(--space-2) 0 0;
+  text-align: left;
+}
+
 .placeholder {
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-md);

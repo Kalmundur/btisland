@@ -45,6 +45,11 @@ export function formatShortDate(date: IsoDate, lang: Language = currentLanguage(
   return lang === 'is' ? `${d}. ${month}` : `${d} ${month}`;
 }
 
+/** is: "17. okt. 2026"  en: "17 Oct 2026" (no weekday) */
+export function formatDayMonthYear(date: IsoDate, lang: Language = currentLanguage()): string {
+  return `${formatShortDate(date, lang)} ${parts(date).y}`;
+}
+
 /** Timestamp -> is: "17.10.2026 14:05"  en: "17/10/2026 14:05" (24h in both). */
 export function formatDateTime(iso: string, lang: Language = currentLanguage()): string {
   const dt = new Date(iso);

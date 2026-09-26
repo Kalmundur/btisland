@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { EncounterDetail, EncounterStatus } from '../domain/types';
-import { formatDate, formatShortDate, formatTime } from '../lib/format';
+import { formatDate, formatDayMonthYear, formatShortDate, formatTime } from '../lib/format';
 
 export function StatusBadge({ status }: { status: EncounterStatus }) {
   const { t } = useTranslation();
@@ -84,11 +84,17 @@ export function EncounterHeader({
   highlightTeamId,
   score,
   note,
+  compact = false,
 }: {
   encounter: EncounterDetail;
   highlightTeamId?: string;
   score?: { home: number; away: number } | null;
   note?: ReactNode;
+  /**
+   * Before there is a score: three left-aligned rows – who (Home – Away), when
+   * (Umferð · date · time) and where. Routine statuses (scheduled, lineups) are left out.
+   */
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const e = encounter;
@@ -102,6 +108,28 @@ export function EncounterHeader({
       {name}
     </Link>
   );
+
+  if (compact && !shown) {
+    const quietStatus = e.status === 'scheduled' || e.status === 'lineups';
+    const when = [
+      t('round.label', { number: e.round.number }),
+      !quietStatus && t(`status.${e.status}`),
+      formatDayMonthYear(e.round.date),
+      time,
+    ].filter(Boolean);
+    return (
+      <div className="match-head match-head--compact">
+        <h2 className="match-head__matchup">
+          {side(e.homeTeamName, e.homeTeamId)}
+          <span className="match-head__sep"> – </span>
+          {side(e.awayTeamName, e.awayTeamId)}
+        </h2>
+        <p className="match-head__when">{when.join(' · ')}</p>
+        {e.round.venue && <p className="match-head__venue">{e.round.venue}</p>}
+        {note && <p className="match-head__note">{note}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="match-head">

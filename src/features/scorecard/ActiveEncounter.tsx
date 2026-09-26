@@ -205,6 +205,7 @@ function EncounterFlow({
         highlightTeamId={session.teamId}
         score={revealed ? { home: state.homeScore, away: state.awayScore } : null}
         note={outcome}
+        compact
       />
       <RejectedEntries />
 

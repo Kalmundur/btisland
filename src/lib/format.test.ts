@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatShortDate, formatTime } from './format';
+import { formatDate, formatDayMonthYear, formatShortDate, formatTime } from './format';
 
 describe('date formatting', () => {
   it('formats Icelandic dates without relying on Intl locale data', () => {
     expect(formatDate('2026-09-19', 'is')).toBe('lau. 19. sep. 2026');
     expect(formatDate('2027-03-06', 'is')).toBe('lau. 6. mar. 2027');
     expect(formatShortDate('2026-11-22', 'is')).toBe('22. nóv.');
+    expect(formatDayMonthYear('2026-10-17', 'is')).toBe('17. okt. 2026');
   });
 
   it('formats English dates', () => {
     expect(formatDate('2026-11-22', 'en')).toBe('Sun 22 Nov 2026');
     expect(formatShortDate('2027-01-09', 'en')).toBe('9 Jan');
+    expect(formatDayMonthYear('2027-01-09', 'en')).toBe('9 Jan 2027');
   });
 
   it('trims seconds from times and keeps unknown times null', () => {
