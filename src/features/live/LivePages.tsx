@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { Link, useNavigationType, useParams } from 'react-router';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { Section } from '../../components/List';
@@ -49,6 +49,8 @@ export function LivePage() {
  * navigation reads them.
  */
 const openRoundByDivision = new Map<string, string | null>();
+/** Open/close transition length – keep in sync with .round-acc__panel in league.css. */
+const ACCORDION_MS = 220;
 const timelineScroll = new Map<string, number>();
 
 function pageHeaderHeight(): number {
@@ -96,15 +98,33 @@ function RoundTimeline({ data }: { data: LeagueData }) {
     // Deliberately runs once per mount (= per division), never on data updates.
   }, []);
 
-  // Switching rounds: the round above may collapse, so keep the tapped header where it was.
+  // Switching rounds: the round above may collapse (animated), so keep the tapped header where
+  // it was for the length of the transition. A ResizeObserver runs after each frame's layout and
+  // before paint, so the correction lands in the same frame (no visible drift). Any touch/wheel
+  // hands control back to the user.
   const anchor = useRef<{ id: string; top: number } | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const a = anchor.current;
     anchor.current = null;
     const el = a ? headerRefs.current.get(a.id) : undefined;
-    if (!a || !el) return;
-    const shift = el.getBoundingClientRect().top - a.top;
-    if (shift !== 0) window.scrollBy(0, shift);
+    if (!a || !el || !listRef.current || typeof ResizeObserver === 'undefined') return;
+    const hold = () => {
+      const shift = el.getBoundingClientRect().top - a.top;
+      if (shift !== 0) window.scrollBy(0, shift);
+    };
+    const observer = new ResizeObserver(hold);
+    listRef.current.querySelectorAll('.round-acc__panel').forEach((panel) => observer.observe(panel));
+    const stop = () => observer.disconnect();
+    const timer = window.setTimeout(stop, ACCORDION_MS + 100);
+    window.addEventListener('wheel', stop, { passive: true, once: true });
+    window.addEventListener('touchstart', stop, { passive: true, once: true });
+    return () => {
+      stop();
+      window.clearTimeout(timer);
+      window.removeEventListener('wheel', stop);
+      window.removeEventListener('touchstart', stop);
+    };
   }, [openId]);
 
   // Tapping the open round collapses it (all rounds closed); any other round replaces it.
@@ -125,7 +145,7 @@ function RoundTimeline({ data }: { data: LeagueData }) {
   }, [divisionId]);
 
   return (
-    <div className="round-acc">
+    <div className="round-acc" ref={listRef}>
       {rounds.map((r) => (
         <AccordionRound
           key={r.id}
@@ -161,7 +181,7 @@ function AccordionRound({
   const time = formatTime(round.startTime);
   const buttonId = `round-${round.id}`;
   const panelId = `round-panel-${round.id}`;
-  const Chevron = expanded ? ChevronUp : ChevronDown;
+
   return (
     <section className={`round-acc__item${expanded ? ' round-acc__item--open' : ''}`}>
       <h2 className="round-acc__heading">
@@ -182,32 +202,35 @@ function AccordionRound({
               <span className={`round-acc__status round-acc__status--${status}`}>{t(`roundStatus.${status}`)}</span>
             </span>
           </span>
-          <Chevron className="round-acc__chevron" size={18} aria-hidden />
+          <ChevronDown className="round-acc__chevron" size={18} aria-hidden />
         </button>
       </h2>
-      {expanded && (
-        <div id={panelId} role="region" aria-labelledby={buttonId} className="round-acc__panel">
-          <p className="round-acc__detail">
-            {formatDate(round.date)}
-            {time ? ` · ${time}` : ''}
-          </p>
-          {round.venue && <p className="round-acc__detail">{round.venue}</p>}
-          {encounters.length === 0 ? (
-            <p className="note">{t('live.noEncounters')}</p>
-          ) : (
-            <ul className="list round-acc__matches">
-              {encounters.map((e) => (
-                <EncounterRow
-                  key={e.id}
-                  encounter={e}
-                  showStatus={e.status !== 'scheduled' && e.status !== 'completed'}
-                  quietStatus
-                />
-              ))}
-            </ul>
-          )}
+      {/* Always rendered so it can animate open and closed; inert (not focusable/announced) while closed. */}
+      <div id={panelId} role="region" aria-labelledby={buttonId} className="round-acc__panel" inert={!expanded}>
+        <div className="round-acc__clip">
+          <div className="round-acc__content">
+            <p className="round-acc__detail">
+              {formatDate(round.date)}
+              {time ? ` · ${time}` : ''}
+            </p>
+            {round.venue && <p className="round-acc__detail">{round.venue}</p>}
+            {encounters.length === 0 ? (
+              <p className="note">{t('live.noEncounters')}</p>
+            ) : (
+              <ul className="list round-acc__matches">
+                {encounters.map((e) => (
+                  <EncounterRow
+                    key={e.id}
+                    encounter={e}
+                    showStatus={e.status !== 'scheduled' && e.status !== 'completed'}
+                    quietStatus
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }
