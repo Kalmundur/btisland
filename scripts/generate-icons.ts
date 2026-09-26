@@ -1,9 +1,13 @@
 /**
- * Generates placeholder PWA / app icons (PNG) into public/icons.
- * Run with: npm run icons:generate   – replace the output with real artwork later.
+ * Generates the app icons (PNG) from one piece of artwork, at every size natively (no upscaling):
+ *   - PWA / web icons into public/icons
+ *   - iOS app icon + launch image (ios/App/App/Assets.xcassets)
+ *   - Android launcher icons (legacy, round, adaptive foreground) + splash drawables
+ * Run with: npm run icons:generate   (then `npx cap sync`). Replace the artwork in coverage()
+ * with final branding later – everything is regenerated from it.
  * No dependencies: shapes are rasterised with 4× supersampling and encoded with zlib.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 
@@ -21,6 +25,75 @@ function coverage(x: number, y: number): 'face' | 'handle' | 'ball' | null {
   if (Math.hypot(x - (ax + t * (bx - ax)), y - (ay + t * (by - ay))) <= 0.075) return 'handle';
   if (Math.hypot(x - 0.8, y - 0.78) <= 0.08) return 'ball';
   return null;
+}
+
+interface RenderOptions {
+  /** Artwork inset as a fraction of the icon (keeps it inside platform safe zones). */
+  inset: number;
+  /** Corner radius as a fraction (0 = square, 0.5 = circle). */
+  radius: number;
+  /** 'accent' = teal tile with white artwork; 'none' = white artwork on transparent (adaptive foreground). */
+  background: 'accent' | 'none';
+}
+
+/** RGBA of one pixel of the icon at (px, py) in a size×size tile. */
+function iconPixel(size: number, px: number, py: number, o: RenderOptions): [number, number, number, number] {
+  const SS = 4;
+  let bg = 0;
+  let fg = 0;
+  for (let sy = 0; sy < SS; sy++) {
+    for (let sx = 0; sx < SS; sx++) {
+      const u = (px + (sx + 0.5) / SS) / size;
+      const v = (py + (sy + 0.5) / SS) / size;
+      const cx = Math.max(Math.abs(u - 0.5) - (0.5 - o.radius), 0);
+      const cy = Math.max(Math.abs(v - 0.5) - (0.5 - o.radius), 0);
+      if (o.radius === 0 || Math.hypot(cx, cy) <= o.radius) bg++;
+      const au = (u - o.inset) / (1 - 2 * o.inset);
+      const av = (v - o.inset) / (1 - 2 * o.inset);
+      if (au >= 0 && au <= 1 && av >= 0 && av <= 1 && coverage(au, av)) fg++;
+    }
+  }
+  const n = SS * SS;
+  const f = fg / n;
+  if (o.background === 'none') return [WHITE[0], WHITE[1], WHITE[2], Math.round(f * 255)];
+  const mix = (c: number) => Math.round(ACCENT[c] * (1 - f) + WHITE[c] * f);
+  return [mix(0), mix(1), mix(2), Math.round((bg / n) * 255)];
+}
+
+/** Opaque RGB image: white canvas with the rounded icon tile centred (launch screens). */
+function renderSplash(w: number, h: number, iconFraction: number): Buffer {
+  const size = Math.round(Math.min(w, h) * iconFraction);
+  const x0 = Math.round((w - size) / 2);
+  const y0 = Math.round((h - size) / 2);
+  const rgb = Buffer.alloc(w * h * 3, 255);
+  const tile: RenderOptions = { inset: 0.04, radius: 0.22, background: 'accent' };
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const [r, g, b, a] = iconPixel(size, px, py, tile);
+      const i = ((y0 + py) * w + (x0 + px)) * 3;
+      const k = a / 255;
+      rgb[i] = Math.round(r * k + 255 * (1 - k));
+      rgb[i + 1] = Math.round(g * k + 255 * (1 - k));
+      rgb[i + 2] = Math.round(b * k + 255 * (1 - k));
+    }
+  }
+  return encodePng(w, h, rgb, 'rgb');
+}
+
+/** Square icon; `opaque` drops the alpha channel (required for the App Store icon). */
+function renderIcon(size: number, o: RenderOptions, opaque = false): Buffer {
+  const out = Buffer.alloc(size * size * (opaque ? 3 : 4));
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const [r, g, b, a] = iconPixel(size, px, py, o);
+      const i = (py * size + px) * (opaque ? 3 : 4);
+      out[i] = r;
+      out[i + 1] = g;
+      out[i + 2] = b;
+      if (!opaque) out[i + 3] = a;
+    }
+  }
+  return encodePng(size, size, out, opaque ? 'rgb' : 'rgba');
 }
 
 function render(size: number, opts: { maskable: boolean; rounded: boolean }): Buffer {
@@ -74,16 +147,17 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, td, crc]);
 }
 
-function encodePng(w: number, h: number, rgba: Buffer): Buffer {
+function encodePng(w: number, h: number, pixels: Buffer, mode: 'rgba' | 'rgb' = 'rgba'): Buffer {
+  const bpp = mode === 'rgba' ? 4 : 3;
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(w, 0);
   ihdr.writeUInt32BE(h, 4);
   ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // RGBA
-  const raw = Buffer.alloc((w * 4 + 1) * h);
+  ihdr[9] = mode === 'rgba' ? 6 : 2; // RGBA / RGB
+  const raw = Buffer.alloc((w * bpp + 1) * h);
   for (let y = 0; y < h; y++) {
-    raw[y * (w * 4 + 1)] = 0; // filter: none
-    rgba.copy(raw, y * (w * 4 + 1) + 1, y * w * 4, (y + 1) * w * 4);
+    raw[y * (w * bpp + 1)] = 0; // filter: none
+    pixels.copy(raw, y * (w * bpp + 1) + 1, y * w * bpp, (y + 1) * w * bpp);
   }
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -104,4 +178,40 @@ const icons: Array<[string, number, { maskable: boolean; rounded: boolean }]> = 
 for (const [name, size, opts] of icons) {
   writeFileSync(out + name, render(size, opts));
   console.log('wrote', name);
+}
+
+// --- Native apps (only when the Capacitor platforms exist) ---------------------------------
+const root = fileURLToPath(new URL('../', import.meta.url));
+const write = (path: string, data: Buffer) => {
+  writeFileSync(root + path, data);
+  console.log('wrote', path);
+};
+
+if (existsSync(root + 'ios/App/App/Assets.xcassets')) {
+  const assets = 'ios/App/App/Assets.xcassets';
+  // Full-bleed square, no alpha: iOS applies its own corner mask.
+  write(`${assets}/AppIcon.appiconset/AppIcon-512@2x.png`, renderIcon(1024, { inset: 0.04, radius: 0, background: 'accent' }, true));
+  const splash = renderSplash(2732, 2732, 0.14);
+  for (const name of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
+    write(`${assets}/Splash.imageset/${name}`, splash);
+  }
+}
+
+if (existsSync(root + 'android/app/src/main/res')) {
+  const res = 'android/app/src/main/res';
+  const densities: Array<[string, number]> = [['mdpi', 1], ['hdpi', 1.5], ['xhdpi', 2], ['xxhdpi', 3], ['xxxhdpi', 4]];
+  for (const [d, k] of densities) {
+    write(`${res}/mipmap-${d}/ic_launcher.png`, renderIcon(48 * k, { inset: 0.04, radius: 0.22, background: 'accent' }));
+    write(`${res}/mipmap-${d}/ic_launcher_round.png`, renderIcon(48 * k, { inset: 0.12, radius: 0.5, background: 'accent' }));
+    // Adaptive icon: 108dp layer, artwork inside the central 66dp safe zone; teal background colour.
+    write(`${res}/mipmap-${d}/ic_launcher_foreground.png`, renderIcon(108 * k, { inset: 0.25, radius: 0, background: 'none' }));
+  }
+  const splashSizes: Array<[string, number, number]> = [
+    ['drawable', 480, 320],
+    ['drawable-port-mdpi', 320, 480], ['drawable-port-hdpi', 480, 800], ['drawable-port-xhdpi', 720, 1280],
+    ['drawable-port-xxhdpi', 960, 1600], ['drawable-port-xxxhdpi', 1280, 1920],
+    ['drawable-land-mdpi', 480, 320], ['drawable-land-hdpi', 800, 480], ['drawable-land-xhdpi', 1280, 720],
+    ['drawable-land-xxhdpi', 1600, 960], ['drawable-land-xxxhdpi', 1920, 1280],
+  ];
+  for (const [dir, w, h] of splashSizes) write(`${res}/${dir}/splash.png`, renderSplash(w, h, 0.28));
 }

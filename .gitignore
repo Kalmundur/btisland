@@ -10,3 +10,23 @@ supabase/.temp
 supabase/.branches
 *.log
 .DS_Store
+
+# Native signing material and release binaries (never commit)
+*.keystore
+*.jks
+keystore.properties
+*.p12
+*.p8
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.ipa
+*.aab
+*.apk
+google-services.json
+GoogleService-Info.plist
+# Local IDE state for the native projects
+.idea/
+android/.idea/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcworkspace/xcuserdata/

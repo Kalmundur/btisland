@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { storage } from './storage';
+import { storage, storageReady } from './storage';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -15,7 +15,16 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
-        storage: { getItem: storage.get, setItem: storage.set, removeItem: storage.remove },
+        // Reads wait for the native storage restore, so a cleared WebView never looks like a
+        // new device (which would create a second anonymous user). Immediate on the web.
+        storage: {
+          getItem: async (key: string) => {
+            await storageReady;
+            return storage.get(key);
+          },
+          setItem: storage.set,
+          removeItem: storage.remove,
+        },
       },
     })
   : null;

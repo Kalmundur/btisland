@@ -1,45 +1,64 @@
-# Capacitor (future iOS / Android apps)
+# Native apps (Capacitor): iOS and Android
 
-The web app / PWA ships first. The codebase is already prepared so that it can be wrapped with [Capacitor](https://capacitorjs.com) later, without restructuring. This document explains what is in place and what the future process looks like. **Nothing native is built yet.**
+One codebase, three targets. The React/Vite app is the source of truth. The iOS and Android apps are thin Capacitor shells that bundle the same production build (`dist/`).
 
-## Already prepared
+```
+shared React/Vite app → npm run build → dist/ → Web (Vercel) · iOS (Xcode) · Android (Android Studio)
+```
 
-| Concern | Status |
+- **App ID** (iOS bundle ID and Android application ID): `is.bordtennis.live`. It's defined once, in `capacitor.config.ts`.
+- **App name:** `Borðtennis Live`. It must match `APP_NAME` in `src/config/app.ts`.
+- **Local bundle:** there is no `server.url`. The apps run the bundled build and are not remote webviews of the Vercel site.
+- **Plugins:** `@capacitor/app` (back button, resume), `@capacitor/share`, `@capacitor/preferences`. Capacitor 8 core includes `SystemBars`, which handles the status bar and Android edge-to-edge.
+
+## Commands
+
+| Task | Command |
 |---|---|
-| Config | `capacitor.config.json` (appId `is.bordtennis.live`, `webDir: dist`, `androidScheme: https`). No Capacitor packages are installed yet, so the web build is unaffected. |
-| Safe areas | `viewport-fit=cover` plus `env(safe-area-inset-*)` tokens on the header, bottom nav, banners and admin drawer. |
-| Window sizing | Layout uses CSS and `100dvh` only; nothing depends on fixed window sizes. The bottom nav hides when the on-screen keyboard opens (visualViewport). |
-| Navigation | In-app history via React Router. Back buttons use in-app history, with a parent-page fallback for deep links (`PageHeader`). |
-| Service worker | Not registered inside a native shell (`src/lib/pwa.ts` checks `Capacitor.isNativePlatform()`). The native app serves files locally. |
-| Storage | All app storage goes through `src/lib/storage.ts`, and the Supabase auth session uses it too (`src/lib/supabase.ts`). Score outbox: IndexedDB (`src/offline/idbStore.ts`), available in both WebViews. |
-| Sharing | `ShareButton` uses the Web Share API, with a copy-link fallback. |
-| External links | None open other sites; everything stays in-app. |
-| Auth | Anonymous plus email/password. No OAuth or email-link redirects, so no deep-link auth handling is needed. |
+| Web development | `npm run dev` |
+| Web production build (Vercel runs this) | `npm run build` |
+| Build and copy into both native projects | `npm run native:sync` |
+| iOS: build, sync, open Xcode | `npm run ios:sync` then `npm run ios:open` (macOS only) |
+| Android: build, sync, open Android Studio | `npm run android:sync` then `npm run android:open` |
+| Regenerate all icons (web and native) | `npm run icons:generate` then `npm run native:sync` |
 
-## Future process (when you decide to publish)
+Ordinary features are written once in React. A native release only needs `*:sync`, followed by a build in Xcode or Android Studio.
 
-1. **Install Capacitor:**
-   ```bash
-   npm install @capacitor/core @capacitor/app @capacitor/preferences @capacitor/share
-   npm install -D @capacitor/cli
-   npx cap add ios        # needs macOS + Xcode
-   npx cap add android    # needs Android Studio
-   ```
-2. **Replace the storage backend.** Switch `src/lib/storage.ts` to `@capacitor/preferences` on native: iOS may evict WebView `localStorage` under storage pressure, and the anonymous session and selected player id should survive. Supabase accepts an async storage adapter, so only that file changes.
-3. **Handle the Android back button** with `@capacitor/app`'s `backButton` event: navigate back while there is in-app history, otherwise minimise the app.
-4. **Use native share:** `@capacitor/share` inside `ShareButton` when `Capacitor.isNativePlatform()`.
-5. **Set the share URL base.** Inside the app, `window.location` is a local origin, so add a `VITE_PUBLIC_URL` variable for links that are shared out.
-6. **Icons and splash:** replace the generated placeholders in `public/icons` with real artwork, then generate native assets (e.g. `@capacitor/assets`).
-7. **Build and run:**
-   ```bash
-   npm run build && npx cap sync
-   npx cap open ios       # or: npx cap open android
-   ```
-8. **Supabase:** no change needed. The app talks to the same project over HTTPS, and Realtime uses WebSockets, which both WebViews support.
-9. **Store listings:** Apple Developer Program and Google Play Console accounts, a privacy policy URL (the app stores a player selection and anonymous auth only), screenshots and review.
+## What is native-specific (all centralised)
 
-## Deliberately not done yet
+| File | Purpose |
+|---|---|
+| `capacitor.config.ts` | App ID/name, `webDir: dist`, Android `https` scheme, SystemBars (edge-to-edge insets follow `viewport-fit=cover`) |
+| `src/lib/platform.ts` | `isNative`, `isWeb`, `isIOS`, `isAndroid` (Capacitor APIs, no user-agent sniffing) |
+| `src/lib/native.ts` | Native startup: dark status-bar icons; Android back (close modal → history back → minimise); flush queued scores on resume |
+| `src/lib/storage.ts` | On native, writes are mirrored to Preferences and restored before the first render, so the anonymous session, selected player and language survive iOS WebView storage eviction. Supabase session reads wait for the restore (`storageReady`). |
+| `src/lib/share.ts` | Native share sheet, or Web Share / copy link on the web. Native shares use `PUBLIC_WEB_URL` (`VITE_PUBLIC_URL`, default `https://btisland.vercel.app`). |
+| `src/lib/pwa.ts` | The service worker is never registered inside the native apps. |
 
-- Native builds, signing, store submission.
-- Push notifications.
-- Native storage/share plugins (see steps 2–4 above).
+## Behaviour notes
+
+- **Routing:** React Router runs inside the WebView. Capacitor's local server returns `index.html` for app routes, so this doesn't depend on Vercel rewrites. Web deep links are unchanged. Universal links and app links (opening shared web links in the app) are a later improvement.
+- **Safe areas:** the existing `env(safe-area-inset-*)` tokens cover the header, bottom nav, banners, dialogs, the admin bar, drawer and sheet. They're zero on the web.
+- **Orientation:** portrait on iPhone and Android phones. iPad keeps all orientations, which iPad multitasking requires.
+- **Offline outbox:** unchanged. It uses IndexedDB, which both WebViews support. The browser `online`/`offline` events and the retry timer are kept. On native, queued scores are also sent when the app returns to the foreground.
+- **Realtime:** unchanged. Channels reconnect on `visibilitychange` and `online`, with polling while degraded.
+- **External links:** the app has none, so nothing can replace the app's navigation context.
+- **Organizer portal:** the same app opens `/admin`. It uses the same email/password auth and RLS.
+
+## Icons and launch screen
+
+`npm run icons:generate` draws everything at native size from the artwork in `scripts/generate-icons.ts` (no upscaling):
+
+- **iOS:** `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` (1024×1024, opaque) and `Splash.imageset/*` (2732×2732).
+- **Android:** `mipmap-*/ic_launcher.png`, `ic_launcher_round.png`, `ic_launcher_foreground.png` (adaptive, teal background `#0F766E` in `values/ic_launcher_background.xml`), and `drawable*/splash.png`.
+
+For final branding, either replace the artwork in the script and rerun it, or replace these files directly with the same sizes. You'll need a 1024×1024 square master with no transparency for iOS, and a foreground layer with the artwork inside the central 66/108 for Android.
+
+## Not included (deliberately)
+
+Push notifications, haptics (optional later: confirming a lota, locking a lineup, final confirmation), live updates / code push, analytics, and CI/CD or store automation.
+
+## Release guides
+
+- [docs/ios-release.md](docs/ios-release.md)
+- [docs/android-release.md](docs/android-release.md)

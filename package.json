@@ -7,6 +7,11 @@
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
+    "native:sync": "npm run build && cap sync",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -14,6 +19,12 @@
     "icons:generate": "node scripts/generate-icons.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.2",
     "@supabase/supabase-js": "^2.117.2",
     "i18next": "^26.4.2",
     "lucide-react": "^1.48.0",
@@ -23,6 +34,7 @@
     "react-router": "^8.4.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",

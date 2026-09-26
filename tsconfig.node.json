@@ -14,5 +14,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["vite.config.ts", "scripts", "supabase/tests"]
+  "include": ["vite.config.ts", "capacitor.config.ts", "scripts", "supabase/tests"]
 }

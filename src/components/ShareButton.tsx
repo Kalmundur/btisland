@@ -1,28 +1,20 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Share2 } from 'lucide-react';
+import { currentPageUrl, shareLink } from '../lib/share';
 
-/** Web Share API where available (phones), copy-link fallback elsewhere. */
+/** Shares the current page: native share sheet in the apps, Web Share / copy link on the web. */
 export function ShareButton({ title }: { title: string }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const share = async () => {
-    const url = window.location.href;
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title, url });
-        return;
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return; // user closed the sheet
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
+    const result = await shareLink({ title });
+    if (result === 'copied') {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      window.prompt(t('share.copyPrompt'), url);
+    } else if (result === 'failed') {
+      window.prompt(t('share.copyPrompt'), currentPageUrl());
     }
   };
 

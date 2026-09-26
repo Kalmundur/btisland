@@ -7,7 +7,7 @@ The app name is set in one place: `src/config/app.ts` (`APP_NAME`). The app is a
 **More documentation:**
 - [DEPLOYMENT.md](DEPLOYMENT.md): Vercel, dev/prod Supabase, migrations, organizer bootstrap.
 - [QA.md](QA.md): end-to-end manual test script.
-- [CAPACITOR.md](CAPACITOR.md): the future iOS/Android path.
+- [CAPACITOR.md](CAPACITOR.md): the iOS/Android apps (Capacitor), with release guides in [docs/ios-release.md](docs/ios-release.md) and [docs/android-release.md](docs/android-release.md).
 
 **Stack:** React 19 · TypeScript · Vite · React Router · Supabase (Postgres, RLS, Realtime, Auth) · react-i18next · lucide-react · plain CSS with design tokens · Vitest.
 
@@ -153,8 +153,6 @@ If more than one encounter matches, it returns the choices instead of guessing. 
 
 **Phases.** Matches 1–6 unlock when both lineups are revealed and can be scored concurrently on two tables. Doubles (7) unlock once 1–6 all have reconciled winners and both pairs are revealed. Matches 8–10 unlock once 7 is complete.
 
-**Teams and divisions.** A team is created straight into a division (organizer portal → Lið → Bæta við). It can be in only one division per season, which the database enforces. Later seasons are added on the team page. A team can leave a division only until it has encounters there.
-
 **Lineups and doubles.** A team proposes a selection. Both the singles lineup and the doubles pair need only one confirmation: a selection locks as soon as a player from the team submits it. A team can still change its lineup or pair until the other team has submitted theirs; after that only an organizer can unlock it. Opponents and the public only see the status ("staðfest") until both teams are locked; then both are revealed together. After the lock, only an organizer can unlock a selection (audited).
 
 **Scoring.** Any joined player from either team may score any unlocked match. Every scorer has their own row per game in `set_entries` (never overwritten by someone else). Each row is keyed by an idempotent `client_entry_id`, so retries are safe.
@@ -196,4 +194,4 @@ If more than one encounter matches, it returns the choices instead of guessing. 
 ## 6. Deploying
 
 - **Vercel:** framework "Vite", build `npm run build`, output `dist/`. `vercel.json` rewrites every path to `index.html` for client-side routing. Set both `VITE_` variables in the project settings.
-- **Capacitor (later):** the app avoids browser-only assumptions. It respects safe areas, uses no cookies, keeps storage behind `src/lib/storage.ts`, and uses no service worker. Wrap `dist/` as usual.
+- **Native apps:** `ios/` and `android/` are Capacitor shells that bundle this same build. Run `npm run ios:sync` or `npm run android:sync`, then build in Xcode or Android Studio. See [CAPACITOR.md](CAPACITOR.md).

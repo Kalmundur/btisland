@@ -33,6 +33,12 @@ function syncDocumentLanguage(lng: string) {
 syncDocumentLanguage(i18n.language);
 i18n.on('languageChanged', syncDocumentLanguage);
 
+/** Re-reads the stored language (native apps restore storage after this module loaded). */
+export function applyStoredLanguage(): void {
+  const lng = initialLanguage();
+  if (lng !== i18n.language) void i18n.changeLanguage(lng);
+}
+
 /** Changes the UI language instantly and remembers it on this device. */
 export function setLanguage(lng: Language): void {
   storage.set(STORAGE_KEYS.language, lng);
