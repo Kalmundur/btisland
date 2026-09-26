@@ -30,7 +30,7 @@ export function PlayerPage() {
       {(d) =>
         !d ? (
           <>
-            <PageHeader title={t('live.notFound')} back backTo="/players" />
+            <PageHeader title={t('live.notFound')} back backTo="/standings" />
             <EmptyState>{t('live.notFound')}</EmptyState>
           </>
         ) : (
@@ -39,7 +39,7 @@ export function PlayerPage() {
               title={d.player.fullName}
               subtitle={[d.player.teamName, d.player.clubName].filter(Boolean).join(' · ')}
               back
-              backTo="/players"
+              backTo="/standings"
               actions={<ShareButton title={d.player.fullName} />}
             />
             <div className="page">

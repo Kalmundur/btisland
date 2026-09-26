@@ -24,11 +24,13 @@ const router = createBrowserRouter([
       // The four permanent tabs
       { path: 'scorecard', element: <ScorecardPage /> },
       { path: 'scorecard/match/:matchNumber', element: <ScorecardPage /> },
+      { path: 'schedule', element: <LivePage /> },
       { path: 'standings', element: <StandingsPage /> },
-      { path: 'players', element: <PlayersPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      // Public deep links
-      { path: 'live', element: <LivePage /> },
+      // Public deep links (the full player list is reached from Staða)
+      { path: 'players', element: <PlayersPage /> },
+      // Old schedule links (shared before the Dagskrá tab existed) keep working.
+      { path: 'live', element: <Navigate to="/schedule" replace /> },
       { path: 'live/round/:roundId', element: <RoundPage /> },
       { path: 'live/match/:encounterId', element: <MatchPage /> },
       { path: 'team/:teamId', element: <TeamPage /> },

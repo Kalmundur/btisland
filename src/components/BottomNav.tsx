@@ -1,35 +1,23 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, ListOrdered, Settings, Users, type LucideIcon } from 'lucide-react';
+import { CalendarDays, ClipboardList, ListOrdered, Settings, type LucideIcon } from 'lucide-react';
 import { useScorecardBadge } from '../hooks/useScorecardBadge';
 import { scorecardRoute } from '../features/scorecard/scorecardMemory';
+import { activeTab, TABS, type TabKey } from '../lib/navigation';
 
-interface Tab {
-  to: string;
-  labelKey: 'nav.scorecard' | 'nav.standings' | 'nav.players' | 'nav.settings';
-  icon: LucideIcon;
-  /** Path prefixes that belong to this tab (deep links highlight their parent tab). */
-  prefixes: string[];
-}
-
-const TABS: Tab[] = [
-  { to: '/scorecard', labelKey: 'nav.scorecard', icon: ClipboardList, prefixes: ['/scorecard'] },
-  { to: '/standings', labelKey: 'nav.standings', icon: ListOrdered, prefixes: ['/standings', '/live', '/team'] },
-  { to: '/players', labelKey: 'nav.players', icon: Users, prefixes: ['/players', '/player'] },
-  { to: '/settings', labelKey: 'nav.settings', icon: Settings, prefixes: ['/settings'] },
-];
-
-export function activeTab(pathname: string): string | null {
-  const match = TABS.find((tab) => tab.prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
-  return match?.to ?? null;
-}
+const ICONS: Record<TabKey, LucideIcon> = {
+  scorecard: ClipboardList,
+  schedule: CalendarDays,
+  standings: ListOrdered,
+  settings: Settings,
+};
 
 export function BottomNav() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const current = activeTab(pathname);
-  const onScorecard = current === '/scorecard';
+  const onScorecard = current === 'scorecard';
   const badge = useScorecardBadge(onScorecard ? 'in' : 'out');
 
   // Remember where the scorer was (e.g. a match), so returning to the tab restores it.
@@ -38,13 +26,14 @@ export function BottomNav() {
   return (
     <nav className="bottom-nav" aria-label={t('nav.label')}>
       <div className="bottom-nav__inner">
-        {TABS.map(({ to, labelKey, icon: Icon }) => {
-          const active = current === to;
-          const target = to === '/scorecard' && !onScorecard ? scorecardRoute.get() : to;
-          const showBadge = to === '/scorecard' && badge !== null;
+        {TABS.map(({ key, to }) => {
+          const Icon = ICONS[key];
+          const active = current === key;
+          const target = key === 'scorecard' && !onScorecard ? scorecardRoute.get() : to;
+          const showBadge = key === 'scorecard' && badge !== null;
           return (
             <Link
-              key={to}
+              key={key}
               to={target}
               className={`bottom-nav__item${active ? ' bottom-nav__item--active' : ''}`}
               aria-current={active ? 'page' : undefined}
@@ -61,7 +50,7 @@ export function BottomNav() {
                   </span>
                 )}
               </span>
-              <span className="bottom-nav__label">{t(labelKey)}</span>
+              <span className="bottom-nav__label">{t(`nav.${key}`)}</span>
             </Link>
           );
         })}

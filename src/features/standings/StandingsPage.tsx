@@ -1,14 +1,14 @@
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
-import { List, ListRow } from '../../components/List';
 import { AsyncBoundary, EmptyState } from '../../components/StateViews';
 import { useLeagueData, type LeagueData } from '../../hooks/useLeagueData';
+import { TopPlayers } from '../players/TopPlayers';
 
 /**
  * Compact table: # | Lið | L | S-J-T | Stig. Tiebreak details live on the team page.
  * Officially tied teams share a position; before any official result every rank is "–".
+ * Below the table: the Topp 10 player ranking and a link to the full player list.
  */
 export function StandingsPage() {
   const { t } = useTranslation();
@@ -24,14 +24,12 @@ export function StandingsPage() {
           </>
         ) : (
           <>
-            <PageHeader title={d.league.division.name} subtitle={d.league.season.name} />
+            <PageHeader title={t('standings.title')} subtitle={`${d.league.division.name} · ${d.league.season.name}`} />
             <div className="page page--flush">
               <StandingsTable data={d} />
               {d.standings.every((r) => r.played === 0) && <p className="note note--inset">{t('standings.noResultsYet')}</p>}
               <p className="note note--inset standings__legend">{t('standings.legend')}</p>
-              <List>
-                <ListRow to="/live" leading={<CalendarDays size={20} aria-hidden />} title={t('standings.schedule')} chevron />
-              </List>
+              <TopPlayers data={d} />
             </div>
           </>
         )

@@ -158,7 +158,7 @@ export function RoundPage() {
       {(d) =>
         !d ? (
           <>
-            <PageHeader title={t('live.notFound')} back backTo="/live" />
+            <PageHeader title={t('live.notFound')} back backTo="/schedule" />
             <EmptyState>{t('live.notFound')}</EmptyState>
           </>
         ) : (
@@ -167,7 +167,7 @@ export function RoundPage() {
               title={t('round.label', { number: d.round.number })}
               subtitle={d.division ? `${d.division.name} · ${d.division.season?.name ?? ''}` : undefined}
               back
-              backTo="/live"
+              backTo="/schedule"
               actions={<ShareButton title={`${t('round.label', { number: d.round.number })} · ${d.division?.name ?? ''}`} />}
             />
             <div className="page">
@@ -206,7 +206,7 @@ export function MatchPage() {
 
   return (
     <>
-      <PageHeader title={t('live.matchTitle')} back backTo="/live" actions={<ShareButton title={title} />} />
+      <PageHeader title={t('live.matchTitle')} back backTo="/schedule" actions={<ShareButton title={title} />} />
       <div className="page">
         <AsyncBoundary state={data}>{(d) => <PublicMatch data={d} />}</AsyncBoundary>
       </div>
