@@ -17,7 +17,7 @@ import type { PlayerListItem } from '../../domain/types';
  * "Setja upp prófíl": pick yourself from the official player register.
  * No free-text names – only existing Player records can be selected.
  */
-export function ProfileSetup({ onDone, back }: { onDone?: () => void; back?: boolean }) {
+export function ProfileSetup() {
   const { t } = useTranslation();
   const league = useLeague();
   const { playerId, selectPlayer } = useProfile();
@@ -40,7 +40,6 @@ export function ProfileSetup({ onDone, back }: { onDone?: () => void; back?: boo
     setError(false);
     try {
       await selectPlayer(selected.id);
-      onDone?.();
     } catch {
       setError(true);
     } finally {
@@ -50,7 +49,7 @@ export function ProfileSetup({ onDone, back }: { onDone?: () => void; back?: boo
 
   return (
     <>
-      <PageHeader title={t('profile.setupTitle')} back={back} backTo="/settings" />
+      <PageHeader title={t('profile.setupTitle')} />
       <div className="page">
         <p className="lead">{t('profile.setupIntro')}</p>
         <SearchField value={query} onChange={setQuery} placeholder={t('profile.searchPlaceholder')} />

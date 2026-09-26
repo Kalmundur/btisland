@@ -1,9 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { useLeague } from './LeagueContext';
-import { getServerProfile, localProfile, saveServerProfile } from '../data/profileRepository';
+import { clearServerProfile, getServerProfile, localProfile, saveServerProfile } from '../data/profileRepository';
+import { leaveAllRounds } from '../data/roundRepository';
 import { getPlayer } from '../data/leagueRepository';
 import { useAsync } from '../hooks/useAsync';
+import { scoreOutbox } from '../offline/scoreSync';
+import { scorecardRoute } from '../features/scorecard/scorecardMemory';
 import type { PlayerListItem, UUID } from '../domain/types';
 
 interface ProfileState {
@@ -14,6 +17,12 @@ interface ProfileState {
   /** True until the server mapping has been reconciled with the local cache. */
   syncing: boolean;
   selectPlayer: (playerId: UUID) => Promise<void>;
+  /**
+   * Device logout: forgets this device's player choice and leaves its joined rounds.
+   * The player record, registrations and all scoring history are untouched.
+   * Rejects with 'unsynced_scores' while offline score entries still wait to be sent.
+   */
+  logout: () => Promise<void>;
 }
 
 const ProfileCtx = createContext<ProfileState | null>(null);
@@ -62,9 +71,22 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     [userId],
   );
 
+  const logout = useCallback(async () => {
+    // Queued offline scores are sent with this device's round session: never drop them.
+    await scoreOutbox.flush();
+    if (scoreOutbox.getSnapshot().pending.length > 0) throw new Error('unsynced_scores');
+    if (userId) {
+      await leaveAllRounds(userId);
+      await clearServerProfile(userId);
+    }
+    localProfile.clear();
+    scorecardRoute.set('/scorecard');
+    setPlayerId(null);
+  }, [userId]);
+
   const value = useMemo<ProfileState>(
-    () => ({ playerId, player: player ?? null, syncing: syncing && !playerId, selectPlayer }),
-    [playerId, player, syncing, selectPlayer],
+    () => ({ playerId, player: player ?? null, syncing: syncing && !playerId, selectPlayer, logout }),
+    [playerId, player, syncing, selectPlayer, logout],
   );
 
   return <ProfileCtx.Provider value={value}>{children}</ProfileCtx.Provider>;

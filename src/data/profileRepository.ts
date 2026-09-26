@@ -22,6 +22,11 @@ export async function getServerProfile(authUserId: UUID): Promise<UUID | null> {
   return row?.player_id ?? null;
 }
 
+/** Forget this device's player choice. The player record itself is never touched. */
+export async function clearServerProfile(authUserId: UUID): Promise<void> {
+  unwrap(await requireSupabase().from('player_device_profiles').delete().eq('auth_user_id', authUserId));
+}
+
 export async function saveServerProfile(authUserId: UUID, playerId: UUID): Promise<void> {
   unwrap(
     await requireSupabase()

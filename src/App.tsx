@@ -8,7 +8,7 @@ import { LoadingState } from './components/StateViews';
 import { ScorecardPage } from './features/scorecard/ScorecardPage';
 import { StandingsPage } from './features/standings/StandingsPage';
 import { PlayersPage } from './features/players/PlayersPage';
-import { ChangeProfilePage, SettingsPage } from './features/settings/SettingsPage';
+import { SettingsPage } from './features/settings/SettingsPage';
 import { LivePage, MatchPage, RoundPage } from './features/live/LivePages';
 import { TeamPage } from './features/team/TeamPage';
 import { PlayerPage } from './features/players/PlayerPage';
@@ -27,7 +27,6 @@ const router = createBrowserRouter([
       { path: 'standings', element: <StandingsPage /> },
       { path: 'players', element: <PlayersPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'settings/profile', element: <ChangeProfilePage /> },
       // Public deep links
       { path: 'live', element: <LivePage /> },
       { path: 'live/round/:roundId', element: <RoundPage /> },

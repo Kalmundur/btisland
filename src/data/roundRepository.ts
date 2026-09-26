@@ -64,3 +64,8 @@ export async function listMySessions(authUserId: UUID): Promise<RoundSession[]> 
 export async function leaveRound(sessionId: UUID): Promise<void> {
   unwrap(await requireSupabase().from('round_sessions').delete().eq('id', sessionId));
 }
+
+/** Leave every round this device joined (its entries and confirmations are kept). */
+export async function leaveAllRounds(authUserId: UUID): Promise<void> {
+  unwrap(await requireSupabase().from('round_sessions').delete().eq('auth_user_id', authUserId));
+}
