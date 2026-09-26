@@ -420,6 +420,36 @@
   font-size: var(--text-lg);
 }
 
+/*
+ * Five columns on a 320px phone: no padding on the right of cells, a fixed gap before
+ * every column after #, page gutters on the outer edges. The team name keeps the rest.
+ */
+.standings th,
+.standings td {
+  padding-left: var(--space-1);
+  padding-right: 0;
+}
+
+.standings .table__num:not(:first-child),
+.standings th:nth-child(2),
+.standings td:nth-child(2) {
+  padding-left: var(--space-3);
+}
+
+.standings th:first-child,
+.standings td:first-child {
+  padding-left: var(--space-4);
+}
+
+.standings th:last-child,
+.standings td:last-child {
+  padding-right: var(--space-4);
+}
+
+.standings__legend {
+  font-size: var(--text-xs);
+}
+
 /* ==========================================================================
    Inputs
    ========================================================================== */

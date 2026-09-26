@@ -85,10 +85,11 @@ export const en: Translation = {
     colPosition: '#',
     colTeam: 'Team',
     colPlayed: 'P',
+    colRecord: 'W-D-L',
     colPoints: 'Pts',
     noSeason: 'No active season.',
     schedule: 'Schedule',
-    legend: 'P = played',
+    legend: 'P: Played · W-D-L: Won · Drawn · Lost',
   },
   players: {
     rankingNote: 'Singles in officially confirmed encounters only. Order: most wins, then fewest losses.',
@@ -119,7 +120,7 @@ export const en: Translation = {
   connection: {
     offline: 'No internet connection',
     offlineHint: 'Entered games are kept on this device and sync automatically. Lineups and confirmations need a connection.',
-    realtime: 'Live updates delayed – the page refreshes automatically.',
+    realtime: 'Live updates delayed',
     updateAvailable: 'A new version is ready.',
     updateApply: 'Update',
   },

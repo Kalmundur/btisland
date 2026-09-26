@@ -84,10 +84,11 @@ export const is = {
     colPosition: '#',
     colTeam: 'Lið',
     colPlayed: 'L',
+    colRecord: 'S-J-T',
     colPoints: 'Stig',
     noSeason: 'Ekkert tímabil í gangi.',
     schedule: 'Leikjadagskrá',
-    legend: 'L = leikir',
+    legend: 'L: Leikir · S-J-T: Sigrar · Jafntefli · Töp',
   },
   players: {
     rankingNote: 'Aðeins einliðaleikir í staðfestum viðureignum. Röðun: flestir sigrar, síðan fæst töp.',
@@ -118,7 +119,7 @@ export const is = {
   connection: {
     offline: 'Engin nettenging',
     offlineHint: 'Skráðar lotur geymast á tækinu og samstillast sjálfkrafa. Uppstillingar og staðfestingar krefjast tengingar.',
-    realtime: 'Rauntímauppfærslur tafðar – síðan uppfærist sjálfkrafa.',
+    realtime: 'Rauntímauppfærsla tafin',
     updateAvailable: 'Ný útgáfa er tilbúin.',
     updateApply: 'Uppfæra',
   },
