@@ -134,6 +134,7 @@ function EncounterFlow({
         myPlayerId={session.playerId}
         names={names}
         lockedLabel={t('selection.lineupLocked')}
+        lockedEditNote={t('selection.lineupEditable')}
         validate={(draft) => validateLineup(mySide, draft as Partial<Record<LineupSlotLetter, string>>)}
         onPropose={async (draft) => {
           await proposeLineup(encounter.id, draft as Partial<Record<LineupSlotLetter, string>>);
@@ -166,6 +167,7 @@ function EncounterFlow({
         myPlayerId={session.playerId}
         names={names}
         lockedLabel={t('selection.doublesLocked')}
+        lockedEditNote={t('selection.doublesEditable')}
         requiredConfirmations={DOUBLES_CONFIRMATIONS}
         validate={(draft) => validateDoubles([draft['1'], draft['2']], rosterIds)}
         onPropose={async (draft) => {

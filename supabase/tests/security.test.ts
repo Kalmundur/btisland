@@ -96,7 +96,7 @@ describe('security (database)', { timeout: 60_000 }, () => {
     it('cannot confirm twice with the same player id', async () => {
       const [lineup] = await t.query<{ id: string; version: number }>("select id, version from public.lineups where encounter_id = $1 and side = 'home'", [enc]);
       const again = await h1.rpc<{ confirmed_count: number }>('confirm_lineup', { p_lineup_id: lineup.id, p_version: lineup.version });
-      expect(again.confirmed_count).toBe(2); // unchanged: already locked, and duplicates never count
+      expect(again.confirmed_count).toBe(1); // unchanged: already locked, and duplicates never count
       const rows = await t.query<{ n: number }>('select count(*)::int as n from public.lineup_confirmations where lineup_id = $1 and player_id = $2', [lineup.id, h1.playerId]);
       expect(rows[0].n).toBe(1);
     });

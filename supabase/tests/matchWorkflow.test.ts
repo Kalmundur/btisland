@@ -49,16 +49,9 @@ const err = async (promise: Promise<unknown>) => {
 };
 
 async function lockLineups(c: Ctx) {
-  const home = await c.h1.rpc<{ lineup_id: string; version: number }>('propose_lineup', {
-    p_encounter_id: c.enc,
-    p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Stefán, C: c.p.Daði }),
-  });
-  await c.h2.rpc('confirm_lineup', { p_lineup_id: home.lineup_id, p_version: home.version });
-  const away = await c.a1.rpc<{ lineup_id: string; version: number }>('propose_lineup', {
-    p_encounter_id: c.enc,
-    p_slots: JSON.stringify({ X: c.p.Karl, Y: c.p.Ellert, Z: c.p.Eiríkur }),
-  });
-  await c.a2.rpc('confirm_lineup', { p_lineup_id: away.lineup_id, p_version: away.version });
+  // A submitted lineup is locked immediately (one confirmation).
+  await c.h1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Stefán, C: c.p.Daði }) });
+  await c.a1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ X: c.p.Karl, Y: c.p.Ellert, Z: c.p.Eiríkur }) });
 }
 
 async function lockDoubles(c: Ctx) {
@@ -106,7 +99,7 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
     );
   });
 
-  it('lineup: distinct registered players, two different confirmers, versioning, hidden until both lock', async () => {
+  it('lineup: distinct registered players, locked on submit, changeable until both teams submit', async () => {
     expect(await err(c.h1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Isak, C: c.p.Daði }) })))
       .toContain('duplicate_player');
     expect(await err(c.h1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Karl, C: c.p.Daði }) })))
@@ -114,46 +107,42 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
     expect(await err(c.h1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ X: c.p.Isak, Y: c.p.Stefán, Z: c.p.Daði }) })))
       .toContain('invalid_lineup');
 
-    const v1 = await c.h1.rpc<{ lineup_id: string; version: number; confirmed_count: number }>('propose_lineup', {
+    // One confirmation is enough: the submitter's proposal locks the lineup at once.
+    const home = await c.h1.rpc<{ lineup_id: string; version: number; confirmed_count: number; locked: boolean }>('propose_lineup', {
       p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Stefán, C: c.p.Daði }),
     });
-    expect(v1).toMatchObject({ version: 1, confirmed_count: 1 });
+    expect(home).toMatchObject({ version: 1, confirmed_count: 1, locked: true });
+    expect(await c.h2.rpc('confirm_lineup', { p_lineup_id: home.lineup_id, p_version: 1 })).toMatchObject({ confirmed_count: 1, locked: true });
 
-    // The proposer cannot count twice.
-    const again = await c.h1.rpc<{ confirmed_count: number; locked: boolean }>('confirm_lineup', { p_lineup_id: v1.lineup_id, p_version: 1 });
-    expect(again).toMatchObject({ confirmed_count: 1, locked: false });
-
-    // Opponent sees status only.
-    expect(await c.a1.select('select * from public.lineup_slots')).toHaveLength(0);
-    expect(await c.a1.select('select confirmed_count from public.lineups where encounter_id = $1', [c.enc])).toEqual([{ confirmed_count: 1 }]);
-    expect(await err(c.a1.rpc('confirm_lineup', { p_lineup_id: v1.lineup_id, p_version: 1 }))).toContain('forbidden');
-
-    // Edit before lock -> version 2, previous confirmations no longer count.
-    const v2 = await c.h2.rpc<{ version: number; confirmed_count: number }>('propose_lineup', {
+    // The opponent has not submitted yet, so the team may still change it: new version, still locked.
+    const changed = await c.h2.rpc<{ version: number; confirmed_count: number; locked: boolean }>('propose_lineup', {
       p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Stefán, B: c.p.Isak, C: c.p.Daði }),
     });
-    expect(v2).toMatchObject({ version: 2, confirmed_count: 1 });
-    expect(await err(c.h1.rpc('confirm_lineup', { p_lineup_id: v1.lineup_id, p_version: 1 }))).toContain('lineup_changed');
-    const locked = await c.h1.rpc<{ confirmed_count: number; locked: boolean }>('confirm_lineup', { p_lineup_id: v1.lineup_id, p_version: 2 });
-    expect(locked).toMatchObject({ confirmed_count: 2, locked: true });
-    expect(await err(c.h1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Stefán, C: c.p.Daði }) })))
-      .toContain('lineup_locked');
+    expect(changed).toMatchObject({ version: 2, confirmed_count: 1, locked: true });
 
-    // Still hidden from the opponent and the public until the away lineup locks too.
+    // Opponent sees status only and cannot confirm; still hidden from everyone until the away lineup is submitted.
+    expect(await c.a1.select('select confirmed_count from public.lineups where encounter_id = $1', [c.enc])).toEqual([{ confirmed_count: 1 }]);
+    expect(await err(c.a1.rpc('confirm_lineup', { p_lineup_id: home.lineup_id, p_version: 1 }))).toContain('forbidden');
     expect(await c.a1.select('select * from public.lineup_slots')).toHaveLength(0);
     expect(await c.t.as(null, () => c.t.query('select * from public.lineup_slots'))).toHaveLength(0);
     expect(await c.h2.select('select * from public.lineup_slots')).toHaveLength(3);
+    expect((await games(c)).slice(0, 6).every((g) => g.status === 'locked')).toBe(true);
 
-    const away = await c.a1.rpc<{ lineup_id: string; version: number }>('propose_lineup', {
-      p_encounter_id: c.enc, p_slots: JSON.stringify({ X: c.p.Karl, Y: c.p.Ellert, Z: c.p.Eiríkur }),
-    });
-    await c.a2.rpc('confirm_lineup', { p_lineup_id: away.lineup_id, p_version: away.version });
+    await c.a1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ X: c.p.Karl, Y: c.p.Ellert, Z: c.p.Eiríkur }) });
 
     expect(await c.t.as(null, () => c.t.query('select * from public.lineup_slots'))).toHaveLength(6);
     expect((await encounter(c)).status).toBe('lineups');
     expect((await games(c)).slice(0, 6).every((g) => g.status === 'available')).toBe(true);
-    // Organizer sees everything, including superseded confirmations (home v1 + v2 ×2, away ×2).
-    expect(await c.t.as(c.org, () => c.t.query('select id, player_id from public.lineup_confirmations'))).toHaveLength(5);
+    expect(await c.t.as(null, () => c.t.query("select s.player_id from public.lineup_slots s join public.lineups l on l.id = s.lineup_id where l.side = 'home' and s.slot = 'A'")))
+      .toEqual([{ player_id: c.p.Stefán }]);
+
+    // Both teams have submitted: players can no longer change either lineup.
+    expect(await err(c.h1.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Stefán, C: c.p.Daði }) })))
+      .toContain('lineup_locked');
+    expect(await err(c.a2.rpc('propose_lineup', { p_encounter_id: c.enc, p_slots: JSON.stringify({ X: c.p.Ellert, Y: c.p.Karl, Z: c.p.Eiríkur }) })))
+      .toContain('lineup_locked');
+    // Organizer sees every confirmation row, including the superseded home v1.
+    expect(await c.t.as(c.org, () => c.t.query('select id, player_id from public.lineup_confirmations'))).toHaveLength(3);
   });
 
   it('game entry rules: phase gating, valid scores, no games after 3 wins, no gaps', async () => {
@@ -265,14 +254,22 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
     });
     expect(home).toMatchObject({ version: 1, confirmed_count: 1, locked: true });
     expect(await c.h2.rpc('confirm_doubles', { p_selection_id: home.selection_id, p_version: 1 })).toMatchObject({ locked: true });
-    expect(await err(c.h2.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Stefán })))
-      .toContain('doubles_locked');
+    // The opponent has not submitted yet, so the team may still change it: new version, still locked.
+    const changed = await c.h2.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Stefán });
+    expect(changed).toMatchObject({ version: 2, confirmed_count: 1, locked: true });
     // Opponent cannot see the pair until both teams have submitted.
     expect(await c.a1.select('select * from public.doubles_players')).toHaveLength(0);
     expect((await games(c))[6].status).toBe('locked');
 
     await c.a1.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Eiríkur });
     expect(await c.a1.select('select * from public.doubles_players')).toHaveLength(4);
+    expect(await c.a1.select('select player_id from public.doubles_players dp join public.doubles_selections ds on ds.id = dp.doubles_selection_id where ds.side = $1 order by dp.position', ['home']))
+      .toEqual([{ player_id: c.p.Isak }, { player_id: c.p.Stefán }]);
+    // Both teams have submitted: players can no longer change either pair.
+    expect(await err(c.h1.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Isak, p_player2: c.p.Hugo })))
+      .toContain('doubles_locked');
+    expect(await err(c.a2.rpc('propose_doubles', { p_encounter_id: c.enc, p_player1: c.p.Karl, p_player2: c.p.Lúkas })))
+      .toContain('doubles_locked');
     rows = await games(c);
     expect(rows[6].status).toBe('available');
     expect(rows.slice(7).every((r) => r.status === 'locked')).toBe(true);
@@ -354,10 +351,11 @@ describe('match workflow (database)', { timeout: 60_000 }, () => {
     await c.t.as(c.org, () => c.t.query('select public.admin_unlock_lineup($1, $2)', [lineup.id, 'Rangur leikmaður']));
     expect((await games(c)).slice(0, 6).every((g) => g.status === 'locked')).toBe(true);
     expect(await c.a1.select('select * from public.lineup_slots')).toHaveLength(3); // own only again
-    const reproposed = await c.h1.rpc<{ version: number }>('propose_lineup', {
+    // Re-submitting after the unlock locks it again straight away.
+    const reproposed = await c.h1.rpc<{ locked: boolean }>('propose_lineup', {
       p_encounter_id: c.enc, p_slots: JSON.stringify({ A: c.p.Isak, B: c.p.Hugo, C: c.p.Daði }),
     });
-    await c.h2.rpc('confirm_lineup', { p_lineup_id: lineup.id, p_version: reproposed.version });
+    expect(reproposed.locked).toBe(true);
     const rows = await games(c);
     expect(rows[0]).toMatchObject({ status: 'completed', winner: 'home' }); // entries were kept
   });

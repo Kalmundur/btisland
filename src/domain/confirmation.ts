@@ -1,7 +1,7 @@
 import type { ResultConfirmation, TeamSelection, TeamSide, UUID } from './types';
 
-/** Singles lineup: two DIFFERENT players from the same team must confirm the same version. */
-export const LINEUP_CONFIRMATIONS = 2;
+/** Singles lineup: the submitting player's confirmation is enough (locks on submit). */
+export const LINEUP_CONFIRMATIONS = 1;
 /** Doubles pair: the submitting player's confirmation is enough (locks on submit). */
 export const DOUBLES_CONFIRMATIONS = 1;
 

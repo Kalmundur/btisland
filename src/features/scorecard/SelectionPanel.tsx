@@ -7,9 +7,10 @@ import { useErrorText } from '../../hooks/useErrorText';
 import type { PlayerListItem, TeamSelection } from '../../domain/types';
 
 /**
- * Own-team selection – used for the singles lineup (A/B/C or X/Y/Z, two-person confirmation)
- * and the doubles pair (1/2, locked on submit). Proposing/editing = confirmation #1 of a new
- * version; when more are required, a different teammate confirms the exact version to lock it.
+ * Own-team selection – used for the singles lineup (A/B/C or X/Y/Z) and the doubles pair (1/2).
+ * Both lock on submit (one confirmation). Proposing/editing = confirmation #1 of a new version;
+ * if more were required, a different teammate would confirm the exact version to lock it.
+ * `lockedEditNote` keeps a locked selection editable (until the opponent's is in too).
  */
 export function SelectionPanel({
   title,
@@ -24,6 +25,7 @@ export function SelectionPanel({
   onPropose,
   onConfirm,
   requiredConfirmations = LINEUP_CONFIRMATIONS,
+  lockedEditNote,
 }: {
   title: string;
   slots: readonly string[];
@@ -38,6 +40,8 @@ export function SelectionPanel({
   onPropose: (draft: Record<string, string>) => Promise<void>;
   onConfirm: (version: number) => Promise<void>;
   requiredConfirmations?: number;
+  /** When set, a locked selection can still be changed; this note explains until when. */
+  lockedEditNote?: string;
 }) {
   const { t } = useTranslation();
   const errorText = useErrorText('selection.errors');
@@ -171,6 +175,16 @@ export function SelectionPanel({
                 </Button>
               </div>
               {selection && <p className="selection__version">{t('selection.version', { version: selection.version })}</p>}
+            </>
+          )}
+          {progress.stage === 'locked' && lockedEditNote && (
+            <>
+              <p className="note">{lockedEditNote}</p>
+              <div className="button-stack">
+                <Button variant="secondary" block onClick={startEdit} disabled={busy}>
+                  {t('selection.edit')}
+                </Button>
+              </div>
             </>
           )}
         </>

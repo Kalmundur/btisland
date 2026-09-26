@@ -3,7 +3,7 @@ import { gameWinner, isValidGameScore, matchProgress } from './tableTennis';
 import { MATCH_FORMAT } from './matchFormat';
 import { reconcileGame } from './reconcile';
 import { deriveEncounter, matchPhaseGroups } from './encounterState';
-import { DOUBLES_CONFIRMATIONS, currentConfirmers, resultConfirmationState, selectionProgress } from './confirmation';
+import { DOUBLES_CONFIRMATIONS, LINEUP_CONFIRMATIONS, currentConfirmers, resultConfirmationState, selectionProgress } from './confirmation';
 import { validateDoubles, validateLineup } from './lineup';
 import { scorerView } from './scorer';
 import type { ReconciledGame, ResultConfirmation, TeamSelection, TeamSide } from './types';
@@ -191,12 +191,18 @@ describe('lineup and doubles selection', () => {
     id: 's', encounterId: 'e', teamId: 't', side: 'home', version: 1, confirmedCount: 1, lockedAt: null, confirmations: [], ...over,
   });
 
-  it('two-person confirmation: proposer is #1, a different player is #2, same player never counts twice', () => {
+  it('two-person confirmation (when required): proposer is #1, a different player is #2, same player never counts twice', () => {
     const one = sel({ confirmations: [{ playerId: 'p1', version: 1 }, { playerId: 'p1', version: 1 }] });
-    expect(selectionProgress(one, 'p1')).toMatchObject({ stage: 'pending', count: 1, iConfirmed: true, canConfirm: false });
-    expect(selectionProgress(one, 'p2')).toMatchObject({ canConfirm: true });
+    expect(selectionProgress(one, 'p1', 2)).toMatchObject({ stage: 'pending', count: 1, iConfirmed: true, canConfirm: false });
+    expect(selectionProgress(one, 'p2', 2)).toMatchObject({ canConfirm: true });
     const two = sel({ confirmations: [{ playerId: 'p1', version: 1 }, { playerId: 'p2', version: 1 }] });
-    expect(selectionProgress(two, 'p3')).toMatchObject({ stage: 'locked', count: 2, canConfirm: false });
+    expect(selectionProgress(two, 'p3', 2)).toMatchObject({ stage: 'locked', count: 2, canConfirm: false });
+  });
+
+  it('singles lineup: the submitter alone locks it', () => {
+    const submitted = sel({ confirmations: [{ playerId: 'p1', version: 1 }] });
+    expect(selectionProgress(submitted, 'p2', LINEUP_CONFIRMATIONS)).toMatchObject({ stage: 'locked', count: 1, canConfirm: false });
+    expect(selectionProgress(sel({ confirmedCount: 1 }), null).stage).toBe('locked');
   });
 
   it('doubles pair: the submitter alone locks it', () => {
@@ -211,11 +217,11 @@ describe('lineup and doubles selection', () => {
       confirmations: [{ playerId: 'p1', version: 1 }, { playerId: 'p2', version: 1 }, { playerId: 'p2', version: 2 }],
     });
     expect(currentConfirmers(edited)).toEqual(['p2']);
-    expect(selectionProgress(edited, 'p1')).toMatchObject({ stage: 'pending', count: 1, canConfirm: true });
+    expect(selectionProgress(edited, 'p1', 2)).toMatchObject({ stage: 'pending', count: 1, canConfirm: true });
   });
 
   it('opponent sees only the server count', () => {
-    expect(selectionProgress(sel({ confirmedCount: 1 }), 'x')).toMatchObject({ stage: 'pending', count: 1 });
+    expect(selectionProgress(sel({ confirmedCount: 1 }), 'x', 2)).toMatchObject({ stage: 'pending', count: 1 });
     expect(selectionProgress(undefined, 'x').stage).toBe('missing');
   });
 });
