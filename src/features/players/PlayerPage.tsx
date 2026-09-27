@@ -10,6 +10,8 @@ import { useAsync } from '../../hooks/useAsync';
 import { getPlayer, getPlayerNames, listPlayerGames } from '../../data/leagueRepository';
 import { playerSummary, type PlayerMatchLine } from '../../domain/playerStats';
 import { formatShortDate } from '../../lib/format';
+import { getPlayerProfile } from '../../data/playerProfileRepository';
+import { hasAnyDetail, type PlayerProfileDetails } from '../../domain/playerProfile';
 
 /** /player/:playerId – singles record (Top 5 basis) and a separate doubles section. */
 export function PlayerPage() {
@@ -18,11 +20,15 @@ export function PlayerPage() {
   const league = useLeague();
   const seasonId = league.data?.season.id ?? null;
   const data = useAsync(async () => {
-    const [player, games] = await Promise.all([getPlayer(playerId, seasonId), listPlayerGames(playerId)]);
+    const [player, games, details] = await Promise.all([
+      getPlayer(playerId, seasonId),
+      listPlayerGames(playerId),
+      getPlayerProfile(playerId).catch(() => null), // optional, player-supplied: never breaks the page
+    ]);
     if (!player) return null;
     const summary = playerSummary(playerId, games);
     const others = [...summary.recentSingles, ...summary.recentDoubles].flatMap((l) => [...l.opponentIds, ...l.partnerIds]);
-    return { player, summary, names: await getPlayerNames(others) };
+    return { player, summary, details, names: await getPlayerNames(others) };
   }, [playerId, seasonId]);
 
   return (
@@ -82,6 +88,8 @@ export function PlayerPage() {
                 {d.summary.recentDoubles.length > 0 && <MatchLines lines={d.summary.recentDoubles} names={d.names} doubles />}
                 <p className="note">{t('player.doublesNote')}</p>
               </Section>
+
+              {hasAnyDetail(d.details) && <PlayingStyle details={d.details} />}
             </div>
           </>
         )
@@ -115,5 +123,24 @@ function MatchLines({ lines, names, doubles }: { lines: PlayerMatchLine[]; names
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Player-supplied details – secondary to the official statistics; answered fields only. */
+function PlayingStyle({ details }: { details: PlayerProfileDetails }) {
+  const { t } = useTranslation();
+  const lines = [
+    details.playingHand && t(`playerProfile.handDisplay.${details.playingHand}`),
+    details.playingStyle && t(`playerProfile.styleLevels.${details.playingStyle}`),
+    details.strokeEmphasis && t(`playerProfile.emphasisLevels.${details.strokeEmphasis}`),
+  ].filter(Boolean);
+  return (
+    <Section title={t('playerProfile.sectionTitle')} className="playing-style">
+      <ul className="playing-style__list">
+        {lines.map((line) => (
+          <li key={line as string}>{line}</li>
+        ))}
+      </ul>
+    </Section>
   );
 }
