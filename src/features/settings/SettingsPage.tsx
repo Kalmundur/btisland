@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Info, LogOut, Pencil, ShieldCheck, UserRound } from 'lucide-react';
+import { Info, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
 import { List, ListRow, Section } from '../../components/List';
 import { SegmentedControl } from '../../components/Inputs';
@@ -48,14 +48,9 @@ export function SettingsPage() {
                     <span className="list-row__subtitle">{[player.clubName, player.teamName].filter(Boolean).join(' · ')}</span>
                   )}
                   {playerId ? (
-                    <div className="settings-actions">
-                      <Button variant="secondary" className="settings-action" icon={<Pencil size={16} aria-hidden />} onClick={() => navigate('/settings/player-profile')}>
-                        {t('profile.edit')}
-                      </Button>
-                      <Button variant="secondary" className="settings-action" icon={<LogOut size={16} aria-hidden />} onClick={() => setConfirmLogout(true)}>
-                        {t('profile.logout')}
-                      </Button>
-                    </div>
+                    <Button variant="secondary" className="settings-action" icon={<LogOut size={16} aria-hidden />} onClick={() => setConfirmLogout(true)}>
+                      {t('profile.logout')}
+                    </Button>
                   ) : (
                     <Button variant="secondary" className="settings-action" onClick={() => navigate('/scorecard')}>
                       {t('profile.setupTitle')}

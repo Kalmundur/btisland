@@ -9,7 +9,6 @@ import { ScorecardPage } from './features/scorecard/ScorecardPage';
 import { StandingsPage } from './features/standings/StandingsPage';
 import { PlayersPage } from './features/players/PlayersPage';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { PlayerProfileEditPage } from './features/profile/PlayerProfilePages';
 import { LivePage, MatchPage, RoundPage } from './features/live/LivePages';
 import { TeamPage } from './features/team/TeamPage';
 import { PlayerPage } from './features/players/PlayerPage';
@@ -42,7 +41,6 @@ const router = createBrowserRouter([
       { path: 'schedule', element: <LivePage /> },
       { path: 'standings', element: <StandingsPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'settings/player-profile', element: <PlayerProfileEditPage /> },
       // Public deep links (the full player list is reached from Staða)
       { path: 'players', element: <PlayersPage /> },
       // Old schedule links (shared before the Dagskrá tab existed) keep working.

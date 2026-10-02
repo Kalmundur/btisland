@@ -8,9 +8,6 @@ import { useAsync } from '../../hooks/useAsync';
 import { listMySessions } from '../../data/roundRepository';
 import { pickActiveSession, todayInIceland } from '../../domain/activeSession';
 import { ProfileSetup } from './ProfileSetup';
-import { ProfileOnboarding } from '../profile/PlayerProfilePages';
-import { pendingProfileSetup } from '../profile/profileOnboarding';
-import { useStore } from '../../lib/store';
 import { RoundCodeEntry } from './RoundCodeEntry';
 import { ActiveEncounter } from './ActiveEncounter';
 import { SyncIndicator } from '../../components/SyncIndicator';
@@ -25,7 +22,6 @@ export function ScorecardPage() {
   const { t } = useTranslation();
   const { configured, userId, authError, ensurePlayerSession } = useAuth();
   const { playerId, syncing } = useProfile();
-  const pendingSetup = useStore(pendingProfileSetup);
 
   if (!configured) {
     return (
@@ -52,7 +48,6 @@ export function ScorecardPage() {
     );
   }
   if (!playerId) return <ProfileSetup />;
-  if (pendingSetup === playerId) return <ProfileOnboarding playerId={playerId} />;
   return <RoundGate userId={userId} />;
 }
 

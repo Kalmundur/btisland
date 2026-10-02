@@ -12,7 +12,6 @@ import { matchesSearch } from '../../domain/search';
 import { useLeague } from '../../state/LeagueContext';
 import { useProfile } from '../../state/ProfileContext';
 import type { PlayerListItem } from '../../domain/types';
-import { needsProfileSetup, pendingProfileSetup } from '../profile/profileOnboarding';
 
 /**
  * "Setja upp prófíl": pick yourself from the official player register.
@@ -40,11 +39,8 @@ export function ProfileSetup() {
     setSaving(true);
     setError(false);
     try {
-      // The optional profile step is decided first, so the next screen appears straight away.
-      if (await needsProfileSetup(selected.id)) pendingProfileSetup.set(selected.id);
       await selectPlayer(selected.id);
     } catch {
-      pendingProfileSetup.set(null);
       setError(true);
     } finally {
       setSaving(false);
