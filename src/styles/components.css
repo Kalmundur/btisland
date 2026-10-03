@@ -1086,3 +1086,24 @@
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
+
+/* Long-form text (privacy policy). */
+.prose__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.prose p,
+.prose li {
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.prose ul {
+  margin: 0;
+  padding-left: 1.25em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

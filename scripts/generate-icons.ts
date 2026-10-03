@@ -215,3 +215,10 @@ if (existsSync(root + 'android/app/src/main/res')) {
   ];
   for (const [dir, w, h] of splashSizes) write(`${res}/${dir}/splash.png`, renderSplash(w, h, 0.28));
 }
+
+// --- Google Play store listing (uploaded by hand in Play Console → Main store listing) -------
+// 512×512 icon: full-bleed square (Play applies its own corner mask), 32-bit PNG, fully opaque.
+// 1024×500 feature graphic: opaque, logo centred on white like the launch screen.
+mkdirSync(root + 'store-assets', { recursive: true });
+write('store-assets/play-icon-512.png', renderIcon(512, { inset: 0.04, radius: 0, background: 'accent' }));
+write('store-assets/play-feature-graphic-1024x500.png', renderSplash(1024, 500, 0.5));

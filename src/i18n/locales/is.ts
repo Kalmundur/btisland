@@ -107,6 +107,7 @@ export const is = {
     language: 'Tungumál',
     profile: 'Prófíll',
     adminPortal: 'Stjórnborð mótshaldara',
+    privacy: 'Persónuvernd',
     version: 'Útgáfa {{version}}',
   },
   roundStatus: {

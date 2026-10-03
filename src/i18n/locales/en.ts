@@ -108,6 +108,7 @@ export const en: Translation = {
     language: 'Language',
     profile: 'Profile',
     adminPortal: 'Organizer portal',
+    privacy: 'Privacy policy',
     version: 'Version {{version}}',
   },
   roundStatus: {

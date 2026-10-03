@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Info, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { Info, Lock, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
 import { List, ListRow, Section } from '../../components/List';
 import { SegmentedControl } from '../../components/Inputs';
@@ -65,6 +65,7 @@ export function SettingsPage() {
         <Section title={t('settings.about')}>
           <List>
             <ListRow leading={<Info size={20} aria-hidden />} title={APP_NAME} subtitle={t('settings.version', { version: APP_VERSION })} />
+            <ListRow to="/personuvernd" leading={<Lock size={20} aria-hidden />} title={t('settings.privacy')} chevron />
             {/* Visible to everyone: /admin shows the organizer login unless an organizer is signed in. */}
             <ListRow to="/admin" leading={<ShieldCheck size={20} aria-hidden />} title={t('settings.adminPortal')} chevron />
           </List>
