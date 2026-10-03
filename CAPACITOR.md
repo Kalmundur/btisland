@@ -61,4 +61,5 @@ Push notifications, haptics (optional later: confirming a lota, locking a lineup
 ## Release guides
 
 - [docs/ios-release.md](docs/ios-release.md)
+- [docs/codemagic-testflight.md](docs/codemagic-testflight.md): iOS cloud build and TestFlight upload with Codemagic (no Mac needed)
 - [docs/android-release.md](docs/android-release.md)

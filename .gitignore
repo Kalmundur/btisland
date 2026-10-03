@@ -19,6 +19,8 @@ keystore.properties
 *.p8
 *.cer
 *.mobileprovision
+*.pem
+*.key
 *.provisionprofile
 *.ipa
 *.aab
@@ -30,3 +32,5 @@ GoogleService-Info.plist
 android/.idea/
 ios/App/App.xcodeproj/xcuserdata/
 ios/App/App.xcworkspace/xcuserdata/
+# Local output of iOS cloud-build tooling (Codemagic builds into build/ios on its own machines)
+/build/

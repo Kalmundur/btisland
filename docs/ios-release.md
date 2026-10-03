@@ -1,6 +1,6 @@
 # iOS release (TestFlight → App Store)
 
-**Requires macOS with Xcode.** The native project is in `ios/`. It uses Swift Package Manager, so no CocoaPods are needed.
+**Without a Mac:** use the cloud build in [codemagic-testflight.md](codemagic-testflight.md). Codemagic builds, signs and uploads to TestFlight. This page describes the manual path, which **requires macOS with Xcode**. The native project is in `ios/`. It uses Swift Package Manager, so no CocoaPods are needed.
 
 ## One-time setup
 

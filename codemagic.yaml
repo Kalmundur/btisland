@@ -1,0 +1,109 @@
+# Codemagic: cloud iOS build -> signed IPA -> upload to App Store Connect (TestFlight).
+# Setup guide (no Mac needed): docs/codemagic-testflight.md
+#
+# This is an ADDITIONAL path next to the web deployment. Vercel does not use this file and is
+# unaffected: both build the same `npm run build` output (dist/), which Capacitor bundles into
+# the iOS app.
+#
+# Things that must exist in Codemagic (names must match exactly):
+#   - App Store Connect integration ........ bordtennis-appstore
+#   - Environment variable group ............ bordtennis-production
+#       VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, APP_STORE_APPLE_ID (+ optional VITE_PUBLIC_URL)
+#   - Code signing identities ............... an Apple Distribution certificate and an
+#                                             App Store provisioning profile for is.bordtennis.live
+
+workflows:
+  ios-testflight:
+    name: iOS – TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    # No `triggering` section: the workflow only runs when started manually in Codemagic
+    # (Start new build). This avoids spending macOS minutes on every push. See the guide for
+    # how to enable automatic builds from a release tag later.
+
+    integrations:
+      app_store_connect: bordtennis-appstore
+
+    environment:
+      groups:
+        - bordtennis-production
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: is.bordtennis.live
+      vars:
+        XCODE_PROJECT: ios/App/App.xcodeproj # Swift Package Manager project, no .xcworkspace
+        XCODE_SCHEME: App
+      node: 24.16.0
+      xcode: latest
+
+    scripts:
+      - name: Check required environment variables
+        script: |
+          #!/usr/bin/env bash
+          # Names only, never values.
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY APP_STORE_APPLE_ID; do
+            if [ -z "${!name}" ]; then
+              echo "Missing environment variable: $name (add it to the group 'bordtennis-production')"
+              missing=1
+            fi
+          done
+          case "$APP_STORE_APPLE_ID" in
+            *[!0-9]*) echo "APP_STORE_APPLE_ID must be the numeric Apple ID of the app (not the bundle id)"; missing=1 ;;
+          esac
+          exit $missing
+
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Build web app (same command as Vercel)
+        script: npm run build
+
+      - name: Sync Capacitor iOS
+        script: |
+          npx cap sync ios
+          test -f ios/App/App/public/index.html || { echo "Capacitor copied no web build into ios/App/App/public"; exit 1; }
+
+      - name: Set up code signing
+        script: xcode-project use-profiles --project "$XCODE_PROJECT"
+
+      - name: Choose build number (latest uploaded + 1)
+        script: |
+          #!/usr/bin/env bash
+          latest_number() {
+            # Prints the latest build number App Store Connect reports, or nothing.
+            app-store-connect "$1" "$APP_STORE_APPLE_ID" 2>/dev/null | tr -cd '0-9\n' | tail -n 1
+          }
+          TESTFLIGHT=$(latest_number get-latest-testflight-build-number)
+          APP_STORE=$(latest_number get-latest-app-store-build-number)
+          LATEST=$(( ${TESTFLIGHT:-0} > ${APP_STORE:-0} ? ${TESTFLIGHT:-0} : ${APP_STORE:-0} ))
+          if [ "$LATEST" -eq 0 ]; then
+            echo "No earlier build found in App Store Connect. That is expected for the very first"
+            echo "upload; otherwise check APP_STORE_APPLE_ID and the bordtennis-appstore integration."
+          fi
+          NEXT=$(( LATEST + 1 ))
+          echo "Latest uploaded build: $LATEST -> this build: $NEXT"
+          echo "APP_BUILD_NUMBER=$NEXT" >> "$CM_ENV"
+
+      - name: Build signed IPA
+        script: |
+          # Info.plist reads CFBundleVersion from CURRENT_PROJECT_VERSION; the marketing version
+          # (MARKETING_VERSION in the Xcode project) is left as it is.
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$APP_BUILD_NUMBER COMPILER_INDEX_STORE_ENABLE=NO"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only. After Apple's processing the build is available to INTERNAL TestFlight
+        # testers. Nothing is sent to Beta App Review (external testers) or App Store review.
+        submit_to_testflight: false
+        submit_to_app_store: false
