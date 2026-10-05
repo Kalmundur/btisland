@@ -28,7 +28,7 @@ export interface EncounterData {
   reconciled: ReconciledGame[];
   /** Raw entries – only returned to participants/organizers (RLS); [] for the public. */
   entries: SetEntry[];
-  /** Team confirmations of conflicted games – like `entries`, only for participants/organizers. */
+  /** Player resolutions of conflicted games – like `entries`, only for participants/organizers. */
   conflictConfirmations: ConflictConfirmation[];
   confirmations: ResultConfirmation[];
   names: Record<string, string>;

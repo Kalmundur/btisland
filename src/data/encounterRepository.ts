@@ -71,7 +71,7 @@ export async function listSetEntries(encounterId: UUID): Promise<SetEntry[]> {
   return rows.map(toSetEntry);
 }
 
-/** Team confirmations of conflicted games, including superseded ones (history). Participants/organizers only. */
+/** Player resolutions of conflicted games, including superseded ones (history). Participants/organizers only. */
 export async function listConflictConfirmations(encounterId: UUID): Promise<ConflictConfirmation[]> {
   const rows = unwrap(
     await db()
@@ -84,8 +84,8 @@ export async function listConflictConfirmations(encounterId: UUID): Promise<Conf
 }
 
 /**
- * Confirms, for the player's own team, the correct score of a conflicted game. Online only:
- * the server decides (one home + one away confirmation of the same score resolves the game).
+ * Resolves a conflicted game (or corrects an earlier resolution) with the correct score. One
+ * player of either team is enough; the server applies it at once. Online only.
  * `clientRequestId` makes a retried request (double tap, reconnect) harmless.
  */
 export async function confirmGameResolution(args: {

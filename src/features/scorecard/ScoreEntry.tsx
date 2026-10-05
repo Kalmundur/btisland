@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronLeft, CloudOff, Pencil } from 'lucide-react';
 import { Button } from '../../components/Button';
 import type { EncounterState } from '../../domain/encounterState';
-import type { TeamSide } from '../../domain/types';
 import { isValidGameScore } from '../../domain/tableTennis';
 import { scorerView, type OwnEntry } from '../../domain/scorer';
 import { matchParticipants, type EncounterData } from '../../hooks/useEncounterData';
 import { newClientEntryId, scoreOutbox, useOutbox } from '../../offline/scoreSync';
 import { ScoreInput, type GameScoreDraft } from './ScoreInput';
 import { ConflictResolver } from './ConflictResolver';
+import { activeResolution } from '../../domain/conflictResolution';
 import { scoreDrafts } from './scorecardMemory';
 
 /**
@@ -22,16 +22,13 @@ export function ScoreEntry({
   state,
   matchNumber,
   myPlayerId,
-  mySide,
   onChanged,
 }: {
   data: EncounterData;
   state: EncounterState;
   matchNumber: number;
   myPlayerId: string;
-  /** The scorer's team: a conflict is resolved by one confirmation from each team. */
-  mySide: TeamSide;
-  /** Reload after a conflict confirmation (realtime would also deliver it). */
+  /** Reload after a conflict resolution (realtime would also deliver it). */
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
@@ -62,6 +59,8 @@ export function ScoreEntry({
   const empty: GameScoreDraft = { home: null, away: null };
   const [score, setScore] = useState<GameScoreDraft>(initialDraft ? { home: initialDraft.home, away: initialDraft.away } : empty);
   const lastGame = useRef(currentGame);
+  // A game resolved by a player: its pencil corrects the resolution instead of a raw entry.
+  const [correctingGame, setCorrectingGame] = useState<number | null>(null);
 
   // Empty fields whenever the game being entered changes.
   useEffect(() => {
@@ -143,7 +142,9 @@ export function ScoreEntry({
 
       {view.rows.length > 0 && (
         <ol className="game-history">
-          {view.rows.map((r) => (
+          {view.rows.map((r) => {
+            const resolved = r.conflict ? null : activeResolution(data.conflictConfirmations, matchNumber, r.gameNumber);
+            return (
             <li key={r.gameNumber} className={`game-history__row${r.conflict ? ' game-history__row--conflict' : ''}`}>
               <div className="game-history__main">
                 <span className="game-history__label">{t('match.game', { number: r.gameNumber })}</span>
@@ -162,7 +163,9 @@ export function ScoreEntry({
                   <button
                     type="button"
                     className="icon-btn game-history__edit"
-                    onClick={() => startEdit(r.gameNumber, r.homePoints, r.awayPoints)}
+                    onClick={() =>
+                      resolved ? setCorrectingGame(correctingGame === r.gameNumber ? null : r.gameNumber) : startEdit(r.gameNumber, r.homePoints, r.awayPoints)
+                    }
                     aria-label={`${t('match.edit')} ${t('match.game', { number: r.gameNumber })}`}
                   >
                     <Pencil size={16} aria-hidden />
@@ -180,13 +183,12 @@ export function ScoreEntry({
                     </p>
                   )}
                   <p className="note">{t('match.conflictHelp')}</p>
-                  {/* The scorer whose entry differs may be gone: the two teams can settle it. */}
+                  {/* Probably a typo: any player of either team picks the right score. */}
                   {scoringOpen && r.reconciled?.status === 'conflict' && (
                     <ConflictResolver
                       data={data}
                       matchNumber={matchNumber}
                       gameNumber={r.gameNumber}
-                      mySide={mySide}
                       homeName={homeName}
                       awayName={awayName}
                       onChanged={onChanged}
@@ -194,8 +196,23 @@ export function ScoreEntry({
                   )}
                 </div>
               )}
+              {scoringOpen && resolved && correctingGame === r.gameNumber && (
+                <div className="conflict">
+                  <ConflictResolver
+                    data={data}
+                    matchNumber={matchNumber}
+                    gameNumber={r.gameNumber}
+                    homeName={homeName}
+                    awayName={awayName}
+                    onChanged={onChanged}
+                    current={resolved}
+                    onClose={() => setCorrectingGame(null)}
+                  />
+                </div>
+              )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
 

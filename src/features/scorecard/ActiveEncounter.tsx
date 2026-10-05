@@ -105,7 +105,6 @@ function EncounterFlow({
         state={state}
         matchNumber={matchNumber}
         myPlayerId={session.playerId}
-        mySide={mySide}
         onChanged={reload}
       />
     );

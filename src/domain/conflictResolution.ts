@@ -1,9 +1,9 @@
-import type { ConflictConfirmation, SetEntry, TeamSide } from './types';
+import type { ConflictConfirmation, SetEntry } from './types';
 
 /**
- * Cross-team resolution of a conflicted game (the database decides; this only explains the
- * state to players). A conflict resolves when the active HOME and AWAY confirmations name the
- * same score – never by counting entries.
+ * Resolution of a conflicted game (the database decides; this only feeds the UI). One player
+ * of either team picks the correct score and the game is resolved immediately; the newest
+ * active resolution is the current one. Never decided by counting entries.
  */
 
 export interface GameScore {
@@ -11,7 +11,8 @@ export interface GameScore {
   away: number;
 }
 
-const sameScore = (a: GameScore | null, b: GameScore | null) => !!a && !!b && a.home === b.home && a.away === b.away;
+export const sameScore = (a: GameScore | null | undefined, b: GameScore | null | undefined) =>
+  !!a && !!b && a.home === b.home && a.away === b.away;
 
 /**
  * The distinct scores entered for one game, in a neutral order (by points, not by how many
@@ -26,42 +27,12 @@ export function conflictCandidates(entries: readonly SetEntry[], matchNumber: nu
   return [...seen.values()].sort((a, b) => b.home - a.home || a.away - b.away);
 }
 
-export type TeamResolutionStatus =
-  /** Neither team has confirmed a score yet. */
-  | 'none'
-  /** Our team confirmed; the opponent has not confirmed anything yet. */
-  | 'waiting_opponent'
-  /** The opponent confirmed; our team has not. */
-  | 'waiting_us'
-  /** Both confirmed, different scores. */
-  | 'disagree'
-  /** Both confirmed the same score (the server resolves the game). */
-  | 'agreed';
-
-export interface TeamResolution {
-  status: TeamResolutionStatus;
-  /** Our team's active confirmation. */
-  ours: GameScore | null;
-  /** The opponent's active confirmation. */
-  theirs: GameScore | null;
-}
-
-/** The current team-level state of one conflicted game, seen from `mySide`. */
-export function teamResolution(
-  confirmations: readonly ConflictConfirmation[],
+/** The game's current player resolution (participants only can see these), or null. */
+export function activeResolution(
+  resolutions: readonly ConflictConfirmation[],
   matchNumber: number,
   gameNumber: number,
-  mySide: TeamSide,
-): TeamResolution {
-  const active = (side: TeamSide): GameScore | null => {
-    const c = confirmations.find(
-      (x) => x.matchNumber === matchNumber && x.gameNumber === gameNumber && x.side === side && x.supersededAt === null,
-    );
-    return c ? { home: c.homePoints, away: c.awayPoints } : null;
-  };
-  const ours = active(mySide);
-  const theirs = active(mySide === 'home' ? 'away' : 'home');
-  const status: TeamResolutionStatus =
-    ours && theirs ? (sameScore(ours, theirs) ? 'agreed' : 'disagree') : ours ? 'waiting_opponent' : theirs ? 'waiting_us' : 'none';
-  return { status, ours, theirs };
+): GameScore | null {
+  const r = resolutions.find((x) => x.matchNumber === matchNumber && x.gameNumber === gameNumber && x.supersededAt === null);
+  return r ? { home: r.homePoints, away: r.awayPoints } : null;
 }

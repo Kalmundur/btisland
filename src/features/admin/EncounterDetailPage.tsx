@@ -214,7 +214,7 @@ function Detail({
                 <tr>
                   <th>{t('admin.match.match')}</th>
                   <th>{t('admin.match.game')}</th>
-                  <th>{t('admin.match.confirmedBy')}</th>
+                  <th>{t('admin.match.resolvedBy')}</th>
                   <th className="table__num">{t('admin.match.points')}</th>
                   <th>{t('admin.match.updated')}</th>
                   <th>{t('admin.match.confirmationState')}</th>

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { conflictCandidates, teamResolution } from './conflictResolution';
-import type { ConflictConfirmation, SetEntry, TeamSide } from './types';
+import { activeResolution, conflictCandidates } from './conflictResolution';
+import type { ConflictConfirmation, SetEntry } from './types';
 
 const entry = (player: string, home: number, away: number, game = 1): SetEntry => ({
   id: `${player}-${game}`, encounterId: 'e', matchNumber: 1, gameNumber: game, side: 'home',
   homePoints: home, awayPoints: away, submittedByPlayerId: player, clientEntryId: player, updatedAt: '',
 });
-const conf = (side: TeamSide, home: number, away: number, supersededAt: string | null = null): ConflictConfirmation => ({
-  id: `${side}-${home}-${away}-${supersededAt}`, encounterId: 'e', matchNumber: 1, gameNumber: 1, side, playerId: side,
+const resolution = (home: number, away: number, supersededAt: string | null = null, game = 1): ConflictConfirmation => ({
+  id: `${home}-${away}-${supersededAt}-${game}`, encounterId: 'e', matchNumber: 1, gameNumber: game, side: 'away', playerId: 'p',
   homePoints: home, awayPoints: away, createdAt: '', supersededAt,
 });
 
@@ -24,22 +24,12 @@ describe('conflict candidates', () => {
   });
 });
 
-describe('team resolution state', () => {
-  it('none -> waiting for the opponent -> agreed', () => {
-    expect(teamResolution([], 1, 1, 'home').status).toBe('none');
-    expect(teamResolution([conf('home', 11, 9)], 1, 1, 'home')).toMatchObject({ status: 'waiting_opponent', ours: { home: 11, away: 9 }, theirs: null });
-    expect(teamResolution([conf('home', 11, 9)], 1, 1, 'away').status).toBe('waiting_us');
-    expect(teamResolution([conf('home', 11, 9), conf('away', 11, 9)], 1, 1, 'away').status).toBe('agreed');
-  });
-
-  it('different scores from the two teams are a disagreement', () => {
-    expect(teamResolution([conf('home', 11, 9), conf('away', 11, 8)], 1, 1, 'home')).toMatchObject({
-      status: 'disagree', ours: { home: 11, away: 9 }, theirs: { home: 11, away: 8 },
-    });
-  });
-
-  it('superseded confirmations no longer count', () => {
-    const rows = [conf('home', 11, 8, '2026-10-05T12:00:00Z'), conf('home', 11, 9), conf('away', 11, 8, '2026-10-05T12:01:00Z')];
-    expect(teamResolution(rows, 1, 1, 'home')).toMatchObject({ status: 'waiting_opponent', ours: { home: 11, away: 9 } });
+describe('active resolution', () => {
+  it('is the one non-superseded resolution of that game', () => {
+    expect(activeResolution([], 1, 1)).toBeNull();
+    const rows = [resolution(11, 9, '2026-10-06T12:00:00Z'), resolution(11, 8), resolution(11, 3, null, 2)];
+    expect(activeResolution(rows, 1, 1)).toEqual({ home: 11, away: 8 });
+    expect(activeResolution(rows, 1, 2)).toEqual({ home: 11, away: 3 });
+    expect(activeResolution(rows, 1, 3)).toBeNull();
   });
 });

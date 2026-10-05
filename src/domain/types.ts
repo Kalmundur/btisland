@@ -207,9 +207,9 @@ export interface SetEntry {
 }
 
 /**
- * One team's confirmation of the correct score of a conflicted game (cross-team resolution).
- * Only visible to participants and organizers. `supersededAt` is set when a newer confirmation
- * from the same team replaced it, or the conflict ended another way.
+ * One player's resolution of a conflicted game (table game_conflict_confirmations). One player of
+ * either team is enough; the newest active row is current. `supersededAt` is set when a newer
+ * resolution replaced it (kept as history). Only visible to participants and organizers.
  */
 export interface ConflictConfirmation {
   id: UUID;
