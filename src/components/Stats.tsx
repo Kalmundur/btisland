@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * Label/value grid for summary numbers. `cards` (default) boxes each figure; `compact` is a
@@ -12,8 +12,13 @@ export function Stats({
   items: Array<{ label: string; value: ReactNode; secondary?: boolean }>;
   variant?: 'cards' | 'compact' | 'row';
 }) {
+  // One column per boxed figure: the full-width secondary rows must not create extra columns.
+  const columns = Math.max(1, items.filter((i) => !i.secondary).length);
   return (
-    <dl className={variant === 'cards' ? 'stats' : `stats stats--${variant}`}>
+    <dl
+      className={variant === 'cards' ? 'stats' : `stats stats--${variant}`}
+      style={{ '--stats-cols': columns } as CSSProperties}
+    >
       {items.map((i) => (
         <div key={i.label} className={`stats__item${i.secondary ? ' stats__item--secondary' : ''}`}>
           <dt className="stats__label">{i.label}</dt>

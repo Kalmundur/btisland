@@ -319,7 +319,9 @@
 /* Stats grid */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  /* One column per boxed figure (set by <Stats>), sharing the full width; a column is never
+     narrower than its one-line label. */
+  grid-template-columns: repeat(var(--stats-cols, 3), minmax(min-content, 1fr));
   gap: var(--space-2);
   margin: 0;
 }
@@ -349,7 +351,7 @@
 }
 
 .stats__label {
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   font-size: var(--text-xs);
   font-weight: 700;
   color: var(--text-muted);
