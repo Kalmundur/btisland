@@ -203,6 +203,44 @@ function Detail({
         )}
       </AdminCard>
 
+      <AdminCard title={t('admin.match.conflictConfirmations')}>
+        <p className="note">{t('admin.match.conflictConfirmationsHint')}</p>
+        {data.conflictConfirmations.length === 0 ? (
+          <p className="muted">{t('admin.crud.empty')}</p>
+        ) : (
+          <div className="table-scroll">
+            <table className="table admin-table">
+              <thead>
+                <tr>
+                  <th>{t('admin.match.match')}</th>
+                  <th>{t('admin.match.game')}</th>
+                  <th>{t('admin.match.confirmedBy')}</th>
+                  <th className="table__num">{t('admin.match.points')}</th>
+                  <th>{t('admin.match.updated')}</th>
+                  <th>{t('admin.match.confirmationState')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.conflictConfirmations.map((c) => (
+                  <tr key={c.id} className={c.supersededAt ? 'muted' : undefined}>
+                    <td className="num">{c.matchNumber}</td>
+                    <td className="num">{c.gameNumber}</td>
+                    <td>
+                      {name(c.playerId)} <span className="muted">({t(`side.${c.side}`)})</span>
+                    </td>
+                    <td className="table__num num">
+                      {c.homePoints}–{c.awayPoints}
+                    </td>
+                    <td className="num">{formatDateTime(c.createdAt)}</td>
+                    <td>{c.supersededAt ? t('admin.match.confirmationSuperseded') : t('admin.match.confirmationActive')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AdminCard>
+
       <AdminCard title={t('result.title')}>
         {data.confirmations.length === 0 ? (
           <p className="muted">{t('admin.crud.empty')}</p>

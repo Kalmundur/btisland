@@ -7,6 +7,7 @@ import type { PostgrestError } from '@supabase/supabase-js';
 import { requireSupabase } from '../lib/supabase';
 import { reportChannel } from '../lib/connectivity';
 import type {
+  ConflictConfirmation,
   DoublesSelection,
   Lineup,
   LineupSlotLetter,
@@ -18,11 +19,13 @@ import type {
 import {
   DOUBLES_SELECT,
   LINEUP_SELECT,
+  toConflictConfirmation,
   toDoubles,
   toLineup,
   toReconciledGame,
   toResultConfirmation,
   toSetEntry,
+  type ConflictConfirmationRow,
   type DoublesRow,
   type LineupRow,
   type ResultConfirmationRow,
@@ -66,6 +69,43 @@ export async function listSetEntries(encounterId: UUID): Promise<SetEntry[]> {
       .eq('encounter_id', encounterId),
   ) as SetEntryRow[];
   return rows.map(toSetEntry);
+}
+
+/** Team confirmations of conflicted games, including superseded ones (history). Participants/organizers only. */
+export async function listConflictConfirmations(encounterId: UUID): Promise<ConflictConfirmation[]> {
+  const rows = unwrap(
+    await db()
+      .from('game_conflict_confirmations')
+      .select('id, encounter_id, match_number, game_number, side, player_id, home_points, away_points, created_at, superseded_at')
+      .eq('encounter_id', encounterId)
+      .order('created_at'),
+  ) as ConflictConfirmationRow[];
+  return rows.map(toConflictConfirmation);
+}
+
+/**
+ * Confirms, for the player's own team, the correct score of a conflicted game. Online only:
+ * the server decides (one home + one away confirmation of the same score resolves the game).
+ * `clientRequestId` makes a retried request (double tap, reconnect) harmless.
+ */
+export async function confirmGameResolution(args: {
+  clientRequestId: UUID;
+  encounterId: UUID;
+  matchNumber: number;
+  gameNumber: number;
+  homePoints: number;
+  awayPoints: number;
+}): Promise<void> {
+  unwrap(
+    await db().rpc('confirm_game_resolution', {
+      p_client_request_id: args.clientRequestId,
+      p_encounter_id: args.encounterId,
+      p_match_number: args.matchNumber,
+      p_game_number: args.gameNumber,
+      p_home_points: args.homePoints,
+      p_away_points: args.awayPoints,
+    }),
+  );
 }
 
 export async function listResultConfirmations(encounterId: UUID): Promise<ResultConfirmation[]> {
@@ -253,6 +293,7 @@ const ENCOUNTER_CHILD_TABLES = [
   'encounter_games',
   'reconciled_set_states',
   'set_entries',
+  'game_conflict_confirmations',
   'result_confirmations',
 ] as const;
 

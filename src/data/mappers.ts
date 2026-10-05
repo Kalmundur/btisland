@@ -3,6 +3,7 @@
  * Replace the Row interfaces with `supabase gen types typescript` output when the schema settles.
  */
 import type {
+  ConflictConfirmation,
   Club,
   Division,
   Encounter,
@@ -116,6 +117,18 @@ export interface SetEntryRow {
   submitted_by_player_id: string;
   client_entry_id: string;
   updated_at: string;
+}
+export interface ConflictConfirmationRow {
+  id: string;
+  encounter_id: string;
+  match_number: number;
+  game_number: number;
+  side: TeamSide;
+  player_id: string;
+  home_points: number;
+  away_points: number;
+  created_at: string;
+  superseded_at: string | null;
 }
 export interface EncounterGameRow {
   id: string;
@@ -273,6 +286,19 @@ export const toSetEntry = (r: SetEntryRow): SetEntry => ({
   submittedByPlayerId: r.submitted_by_player_id,
   clientEntryId: r.client_entry_id,
   updatedAt: r.updated_at,
+});
+
+export const toConflictConfirmation = (r: ConflictConfirmationRow): ConflictConfirmation => ({
+  id: r.id,
+  encounterId: r.encounter_id,
+  matchNumber: r.match_number,
+  gameNumber: r.game_number,
+  side: r.side,
+  playerId: r.player_id,
+  homePoints: r.home_points,
+  awayPoints: r.away_points,
+  createdAt: r.created_at,
+  supersededAt: r.superseded_at,
 });
 
 const present = (ids: Array<string | null>): string[] => ids.filter((id): id is string => !!id);

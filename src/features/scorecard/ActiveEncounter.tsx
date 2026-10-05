@@ -99,7 +99,16 @@ function EncounterFlow({
   const names = { ...Object.fromEntries(roster.map((p) => [p.id, p.fullName])), ...data.names };
 
   if (matchNumber && revealed && matchNumber >= 1 && matchNumber <= 10) {
-    return <ScoreEntry data={{ ...data, names }} state={state} matchNumber={matchNumber} myPlayerId={session.playerId} />;
+    return (
+      <ScoreEntry
+        data={{ ...data, names }}
+        state={state}
+        matchNumber={matchNumber}
+        myPlayerId={session.playerId}
+        mySide={mySide}
+        onChanged={reload}
+      />
+    );
   }
 
   const leave = async () => {

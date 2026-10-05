@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useAsync } from './useAsync';
 import { getEncounter, getPlayerNames } from '../data/leagueRepository';
 import {
+  listConflictConfirmations,
   listDoubles,
   listLineups,
   listReconciledGames,
@@ -11,6 +12,7 @@ import {
 } from '../data/encounterRepository';
 import { deriveEncounter, type EncounterState } from '../domain/encounterState';
 import type {
+  ConflictConfirmation,
   DoublesSelection,
   EncounterDetail,
   Lineup,
@@ -26,6 +28,8 @@ export interface EncounterData {
   reconciled: ReconciledGame[];
   /** Raw entries – only returned to participants/organizers (RLS); [] for the public. */
   entries: SetEntry[];
+  /** Team confirmations of conflicted games – like `entries`, only for participants/organizers. */
+  conflictConfirmations: ConflictConfirmation[];
   confirmations: ResultConfirmation[];
   names: Record<string, string>;
 }
@@ -37,12 +41,13 @@ export interface EncounterData {
 export function useEncounterData(encounterId: string, options: { withEntries?: boolean } = {}) {
   const withEntries = options.withEntries ?? false;
   const state = useAsync<EncounterData>(async () => {
-    const [encounter, lineups, doubles, reconciled, entries, confirmations] = await Promise.all([
+    const [encounter, lineups, doubles, reconciled, entries, conflictConfirmations, confirmations] = await Promise.all([
       getEncounter(encounterId),
       listLineups(encounterId),
       listDoubles(encounterId),
       listReconciledGames(encounterId),
       withEntries ? listSetEntries(encounterId) : Promise.resolve([]),
+      withEntries ? listConflictConfirmations(encounterId) : Promise.resolve([]),
       listResultConfirmations(encounterId),
     ]);
     const ids = [
@@ -50,9 +55,10 @@ export function useEncounterData(encounterId: string, options: { withEntries?: b
       ...lineups.flatMap((l) => l.confirmations.map((c) => c.playerId)),
       ...doubles.flatMap((d) => [...d.playerIds, ...d.confirmations.map((c) => c.playerId)]),
       ...entries.map((e) => e.submittedByPlayerId),
+      ...conflictConfirmations.map((c) => c.playerId),
       ...confirmations.map((c) => c.playerId),
     ];
-    return { encounter, lineups, doubles, reconciled, entries, confirmations, names: await getPlayerNames(ids) };
+    return { encounter, lineups, doubles, reconciled, entries, conflictConfirmations, confirmations, names: await getPlayerNames(ids) };
   }, [encounterId, withEntries]);
 
   const { reload } = state;

@@ -206,6 +206,24 @@ export interface SetEntry {
   updatedAt: string;
 }
 
+/**
+ * One team's confirmation of the correct score of a conflicted game (cross-team resolution).
+ * Only visible to participants and organizers. `supersededAt` is set when a newer confirmation
+ * from the same team replaced it, or the conflict ended another way.
+ */
+export interface ConflictConfirmation {
+  id: UUID;
+  encounterId: UUID;
+  matchNumber: number;
+  gameNumber: number;
+  side: TeamSide;
+  playerId: UUID;
+  homePoints: number;
+  awayPoints: number;
+  createdAt: string;
+  supersededAt: string | null;
+}
+
 export type MatchStatus = 'locked' | 'available' | 'in_progress' | 'conflict' | 'completed' | 'not_played';
 
 /** Server-derived summary of one individual match (singles/doubles) inside an encounter. */

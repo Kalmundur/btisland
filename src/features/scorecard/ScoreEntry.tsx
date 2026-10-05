@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronLeft, CloudOff, Pencil } from 'lucide-react';
 import { Button } from '../../components/Button';
 import type { EncounterState } from '../../domain/encounterState';
+import type { TeamSide } from '../../domain/types';
 import { isValidGameScore } from '../../domain/tableTennis';
 import { scorerView, type OwnEntry } from '../../domain/scorer';
 import { matchParticipants, type EncounterData } from '../../hooks/useEncounterData';
 import { newClientEntryId, scoreOutbox, useOutbox } from '../../offline/scoreSync';
 import { ScoreInput, type GameScoreDraft } from './ScoreInput';
+import { ConflictResolver } from './ConflictResolver';
 import { scoreDrafts } from './scorecardMemory';
 
 /**
@@ -20,11 +22,17 @@ export function ScoreEntry({
   state,
   matchNumber,
   myPlayerId,
+  mySide,
+  onChanged,
 }: {
   data: EncounterData;
   state: EncounterState;
   matchNumber: number;
   myPlayerId: string;
+  /** The scorer's team: a conflict is resolved by one confirmation from each team. */
+  mySide: TeamSide;
+  /** Reload after a conflict confirmation (realtime would also deliver it). */
+  onChanged: () => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -53,7 +61,6 @@ export function ScoreEntry({
   const currentGame = editingGame ?? view.nextGame;
   const empty: GameScoreDraft = { home: null, away: null };
   const [score, setScore] = useState<GameScoreDraft>(initialDraft ? { home: initialDraft.home, away: initialDraft.away } : empty);
-  const [openConflict, setOpenConflict] = useState<number | null>(null);
   const lastGame = useRef(currentGame);
 
   // Empty fields whenever the game being entered changes.
@@ -101,9 +108,6 @@ export function ScoreEntry({
     setEditingGame(gameNumber);
     setScore({ home, away });
   };
-
-  const othersFor = (gameNumber: number) =>
-    data.entries.filter((e) => e.matchNumber === matchNumber && e.gameNumber === gameNumber && e.submittedByPlayerId !== myPlayerId);
 
   return (
     <div className="score-entry">
@@ -176,24 +180,17 @@ export function ScoreEntry({
                     </p>
                   )}
                   <p className="note">{t('match.conflictHelp')}</p>
-                  <button
-                    type="button"
-                    className="link-btn"
-                    onClick={() => setOpenConflict(openConflict === r.gameNumber ? null : r.gameNumber)}
-                  >
-                    {openConflict === r.gameNumber ? t('match.hideOthers') : t('match.showOthers')}
-                  </button>
-                  {openConflict === r.gameNumber && (
-                    <ul className="conflict__others">
-                      {othersFor(r.gameNumber).map((e) => (
-                        <li key={e.id}>
-                          <span>{data.names[e.submittedByPlayerId] ?? '…'}</span>
-                          <strong className="num">
-                            {e.homePoints}–{e.awayPoints}
-                          </strong>
-                        </li>
-                      ))}
-                    </ul>
+                  {/* The scorer whose entry differs may be gone: the two teams can settle it. */}
+                  {scoringOpen && r.reconciled?.status === 'conflict' && (
+                    <ConflictResolver
+                      data={data}
+                      matchNumber={matchNumber}
+                      gameNumber={r.gameNumber}
+                      mySide={mySide}
+                      homeName={homeName}
+                      awayName={awayName}
+                      onChanged={onChanged}
+                    />
                   )}
                 </div>
               )}

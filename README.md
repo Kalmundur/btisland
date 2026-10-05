@@ -160,6 +160,12 @@ If more than one encounter matches, it returns the choices instead of guessing. 
 **Scoring.** Any joined player from either team may score any unlocked match. Every scorer has their own row per game in `set_entries` (never overwritten by someone else). Each row is keyed by an idempotent `client_entry_id`, so retries are safe.
 
 - **Reconciliation:** a trigger reconciles every change into `reconciled_set_states`: all submissions equal → that score; any difference → *conflict*, with points hidden. There is no majority voting.
+- **Resolving a conflict** (no single scorer can deadlock an encounter), in order of precedence:
+  1. **Organizer override** (`game_corrections`, `admin_correct_game`): audited, wins over everything.
+  2. **Cross-team agreement** (`game_conflict_confirmations`, `confirm_game_resolution`): one player of the home team and one of the away team confirm the same valid score (*Leysa ágreining*). One active confirmation per team; a newer one from the same team supersedes the older one, which is kept as history. The side comes from the player's round session, never from the client.
+  3. **Identical raw entries**, e.g. after the scorer corrects their own entry.
+
+  Raw entries are never changed or deleted by a resolution. Players see only the distinct entered scores (no counts), and the public sees only *Lota í staðfestingu* and then the result.
 - **Derived state:** `recompute_encounter()` then rebuilds the derived state from scratch: per-match status and winner in `encounter_games`, the team score, phases, early finish, draw, and a result hash. Nothing is stored as +1/−1 counters, so correcting an earlier game recalculates everything.
 - **Concurrency:** all writes for one encounter are serialised with a transaction-level advisory lock.
 

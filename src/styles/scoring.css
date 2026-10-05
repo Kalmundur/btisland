@@ -617,18 +617,62 @@
   font-size: var(--text-md);
 }
 
-.conflict__others {
+/* "Leysa ágreining": neutral candidate scores (no counts), team status, compact panel. */
+.resolve {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.resolve__status {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   font-size: var(--text-sm);
 }
 
-.conflict__others li {
+.resolve__disagree {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.resolve__open {
+  align-self: flex-start;
+}
+
+.resolve__panel {
   display: flex;
-  justify-content: space-between;
-  padding: var(--space-1) 0;
-  border-top: 1px solid rgb(0 0 0 / 0.06);
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.resolve__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.resolve__option {
+  min-height: var(--touch-min);
+  min-width: 72px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.resolve__option--selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 .score-card {
