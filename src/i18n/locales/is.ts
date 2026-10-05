@@ -108,6 +108,7 @@ export const is = {
     profile: 'Prófíll',
     adminPortal: 'Stjórnborð mótshaldara',
     privacy: 'Persónuvernd',
+    install: 'Setja upp á heimaskjá',
     version: 'Útgáfa {{version}}',
   },
   roundStatus: {
@@ -124,7 +125,7 @@ export const is = {
     offline: 'Engin nettenging',
     offlineHint: 'Skráðar lotur geymast á tækinu og samstillast sjálfkrafa. Uppstillingar og staðfestingar krefjast tengingar.',
     realtime: 'Rauntímauppfærsla tafin',
-    updateAvailable: 'Ný útgáfa er tilbúin.',
+    updateAvailable: 'Ný útgáfa tiltæk.',
     updateApply: 'Uppfæra',
   },
   languages: {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useAsync } from './useAsync';
 import { useLeague } from '../state/LeagueContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -61,11 +61,19 @@ export function useLeagueData() {
     };
   }, [raw.data]);
 
-  // Surface "league still loading" as loading, and league errors as errors.
+  // A retry must also re-fetch the league itself when that is what failed (e.g. started offline).
+  const { error: leagueError, reload: reloadLeague } = league;
+  const retry = useCallback(() => {
+    if (leagueError) reloadLeague();
+    reload();
+  }, [leagueError, reloadLeague, reload]);
+
+  // Surface "league still loading" as loading, and league errors as errors. A failed league
+  // fetch is NOT "no season": data stays undefined so the error (and retry) is shown.
   return {
-    data: league.data === undefined && !league.error ? undefined : data,
+    data: league.data === undefined ? undefined : data,
     error: league.error ?? raw.error,
     loading: league.loading || raw.loading,
-    reload,
+    reload: retry,
   };
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { getCurrentLeague } from '../data/leagueRepository';
 import { useAsync, type AsyncState } from '../hooks/useAsync';
@@ -12,6 +12,13 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     () => (isSupabaseConfigured ? getCurrentLeague() : Promise.resolve(null)),
     [],
   );
+  // Started without a connection: try again as soon as it is back.
+  const { error, reload } = state;
+  useEffect(() => {
+    if (!error) return;
+    window.addEventListener('online', reload);
+    return () => window.removeEventListener('online', reload);
+  }, [error, reload]);
   return <LeagueCtx.Provider value={state}>{children}</LeagueCtx.Provider>;
 }
 

@@ -109,6 +109,7 @@ export const en: Translation = {
     profile: 'Profile',
     adminPortal: 'Organizer portal',
     privacy: 'Privacy policy',
+    install: 'Add to home screen',
     version: 'Version {{version}}',
   },
   roundStatus: {
@@ -125,7 +126,7 @@ export const en: Translation = {
     offline: 'No internet connection',
     offlineHint: 'Entered games are kept on this device and sync automatically. Lineups and confirmations need a connection.',
     realtime: 'Live updates delayed',
-    updateAvailable: 'A new version is ready.',
+    updateAvailable: 'A new version is available.',
     updateApply: 'Update',
   },
   languages: {
